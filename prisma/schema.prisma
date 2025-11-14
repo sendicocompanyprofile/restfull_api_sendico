@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  username String @id @db.VarChar(100)
+  password String @db.VarChar(255)
+  name     String @db.VarChar(20)
+  token    String? @db.VarChar(100)
+
+  @@map("users")
+}
+
+model Posting {
+  id          String   @id @default(uuid()) @db.Char(36)
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  date        DateTime @db.Date
+  pictures    Json     @default("[]") // Array of up to 3 image URLs
+  createdAt   DateTime @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("postings")
+}
+
+model Blog {
+  id          String   @id @default(uuid()) @db.Char(36)
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  date        DateTime @db.Date
+  picture     String   @db.VarChar(255) // Single image URL
+  createdAt   DateTime @default(now()) @db.Timestamp(0)
+  updatedAt   DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("blogs")
+}

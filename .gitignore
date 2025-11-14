@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Production build
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables - NEVER commit these
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.development.local
+.env.test.local
+
+# Prisma
+/generated/
+prisma/dev.db
+prisma/dev.db-journal
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+*.code-workspace
+.editorconfig
+
+# Logs
+logs/
+*.log
+combined.log
+error.log
+production.log
+
+# OS specific files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+.cache/
+
+# Package manager lock files (optional - uncomment to ignore)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Public uploads (if storing locally during development)
+public/uploads/
+uploads/
+
+# Testing coverage
+coverage/
+.nyc_output/
+.jest_cache/
+
+# Misc
+*.pem
+*.key
+*.cert
+*.csr
+.env.*.ts
