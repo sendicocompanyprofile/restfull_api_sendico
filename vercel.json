@@ -1,23 +1,14 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": "dist/**",
-        "excludeFiles": "node_modules/**"
-      }
+  "functions": {
+    "api/index.ts": {
+      "runtime": "@vercel/node"
     }
-  ],
+  },
+  "includeFiles": ["generated/**"],
   "routes": [
     {
       "src": "/(.*)",
       "dest": "api/index.ts"
     }
-  ],
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "NODE_ENV": "production"
-  }
+  ]
 }
