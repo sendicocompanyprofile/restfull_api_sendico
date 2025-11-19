@@ -218,6 +218,57 @@ export class UserService {
     }
   }
 
+  async getAllUsers(): Promise<UserResponse[]> {
+    try {
+      const users = await this.prisma.user.findMany({
+        select: {
+          username: true,
+          name: true,
+        },
+      });
+
+      logger.info(`Found ${users.length} users`);
+      return users;
+    } catch (error) {
+      logger.error('Get all users operation failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new ResponseError(500, 'Failed to get all users');
+    }
+  }
+
+  async deleteUser(username: string): Promise<void> {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { username },
+      });
+
+      if (!user) {
+        logger.warn('Delete user failed - user not found', {
+          username,
+        });
+        throw new ResponseError(404, 'User not found');
+      }
+
+      await this.prisma.user.delete({
+        where: { username },
+      });
+
+      logger.info('User deleted successfully', {
+        username,
+      });
+    } catch (error) {
+      if (error instanceof ResponseError) {
+        throw error;
+      }
+      logger.error('Delete user operation failed', {
+        username,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new ResponseError(500, 'Failed to delete user');
+    }
+  }
+
   async getUserByToken(token: string): Promise<string | null> {
     const user = await this.prisma.user.findFirst({
       where: { token },

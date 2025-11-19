@@ -220,6 +220,69 @@ curl -X DELETE http://localhost:3000/api/users/current \
 
 ---
 
+### 6. Get All Users (Public)
+**GET** `/users`
+
+Mendapatkan daftar semua user yang terdaftar.
+
+**Response (200 OK):**
+```json
+{
+  "data": [
+    {
+      "username": "user123",
+      "name": "John Doe"
+    },
+    {
+      "username": "user456",
+      "name": "Jane Smith"
+    }
+  ]
+}
+```
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:3000/api/users
+```
+
+---
+
+### 7. Delete User (Protected)
+**DELETE** `/users/:username`
+
+Menghapus user berdasarkan username. Memerlukan hak akses admin.
+
+**Headers:**
+```
+X-API-TOKEN: uuid-token-string
+```
+
+**URL Parameters:**
+- `username`: string (required, username of the user to be deleted)
+
+**Response (200 OK):**
+```json
+{
+  "data": "OK"
+}
+```
+
+**Error (404 Not Found):**
+```json
+{
+  "errors": "User not found"
+}
+```
+
+**cURL Example:**
+```bash
+curl -X DELETE http://localhost:3000/api/users/user_to_delete \
+  -H "X-API-TOKEN: admin-token-string"
+```
+
+---
+
 ## 📸 POSTING ENDPOINTS
 
 ### 1. Create Posting (Protected)

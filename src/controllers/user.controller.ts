@@ -66,6 +66,28 @@ export class UserController {
       next(error);
     }
   }
+
+  async getAllUsers(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await userService.getAllUsers();
+      sendSuccess(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { username } = req.params;
+      if (!username) {
+        throw new ResponseError(400, 'Username is required');
+      }
+      await userService.deleteUser(username);
+      sendSuccess(res, { data: 'OK' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const userController = new UserController();
