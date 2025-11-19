@@ -1,8 +1,4 @@
 import winston from 'winston';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Define custom log levels
 const customLevels = {
@@ -34,25 +30,7 @@ export const logger = winston.createLogger({
   ),
   defaultMeta: { service: 'restful-api-sendico' },
   transports: [
-    // Log errors to file
-    new winston.transports.File({
-      filename: 'logs/error.log',
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-    // Log all levels to file
-    new winston.transports.File({
-      filename: 'logs/combined.log',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-  ],
-});
-
-// Add console transport in development
-if (process.env.NODE_ENV !== 'production') {
-  logger.add(
+    // Always log to console. In production (Vercel), this is the only transport.
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.colorize({ colors: customLevels.colors }),
@@ -63,18 +41,25 @@ if (process.env.NODE_ENV !== 'production') {
           return `[${timestamp}] ${level}: ${message} ${metaStr}`;
         })
       ),
-    })
-  );
-}
+    }),
+  ],
+});
 
-// Add file transport in production
-if (process.env.NODE_ENV === 'production') {
+// Add file transports only when not in production (i.e., for local development)
+if (process.env.NODE_ENV !== 'production') {
   logger.add(
     new winston.transports.File({
-      filename: 'logs/production.log',
-      level: 'info',
-      maxsize: 5242880,
-      maxFiles: 10,
+      filename: 'logs/error.log',
+      level: 'error',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
+    })
+  );
+  logger.add(
+    new winston.transports.File({
+      filename: 'logs/combined.log',
+      maxsize: 5242880, // 5MB
+      maxFiles: 5,
     })
   );
 }
