@@ -1,5 +1,6 @@
 # API Testing Script
 $baseUrl = "http://127.0.0.1:3000/api"
+# $baseUrl = "https://restfull-api-sendico.vercel.app/api"
 $testNum = Get-Random -Minimum 1000 -Maximum 9999
 $testUsername = "user$testNum"
 $testPassword = "password123"
