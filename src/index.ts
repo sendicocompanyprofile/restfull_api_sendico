@@ -1,6 +1,7 @@
 import 'dotenv/config.js';
 import express from 'express';
 import type { Request, Response } from 'express';
+import cors from 'cors';
 import userRouter from './routes/user.routes.js';
 import postingRouter from './routes/posting.routes.js';
 import blogRouter from './routes/blog.routes.js';
@@ -15,6 +16,27 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLoggingMiddleware);
+
+// CORS Configuration
+// const allowedOrigins = [
+//   'http://localhost:3000', // Example for local development
+//   'https://your-frontend-domain.com', // TODO: Add your production frontend domain
+// ];
+
+// const corsOptions: cors.CorsOptions = {
+//   origin: (origin, callback) => {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+// };
+
+// app.use(cors(corsOptions));
+
+// CORS Configuration - Allow all origins temporarily
+app.use(cors());
 
 // Routes
 app.use('/api', userRouter);
