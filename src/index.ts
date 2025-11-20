@@ -1,7 +1,7 @@
 import 'dotenv/config.js';
 import express from 'express';
 import type { Request, Response } from 'express';
-import cors from 'cors';
+// import cors from 'cors';
 import userRouter from './routes/user.routes.js';
 import postingRouter from './routes/posting.routes.js';
 import blogRouter from './routes/blog.routes.js';
