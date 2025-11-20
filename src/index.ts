@@ -13,8 +13,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-// CORS Configuration - Allow all origins temporarily
-app.use(cors());
+// // CORS Configuration - Allow all origins temporarily
+// app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLoggingMiddleware);
