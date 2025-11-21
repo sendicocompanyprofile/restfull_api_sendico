@@ -14,22 +14,22 @@ const app = express();
 // Middleware
 // app.use(cors());
 // CORS Configuration
-const allowedOrigins = [
-  'http://localhost:3000', // Example for local development
-  'http://192.168.100.4:3000', // TODO: Add your production frontend domain
-];
+// const allowedOrigins = [
+//   'http://localhost:3000', // Example for local development
+//   'http://192.168.100.4:3000', // TODO: Add your production frontend domain
+// ];
 
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-};
+// const corsOptions: cors.CorsOptions = {
+//   origin: (origin, callback) => {
+//     if (!origin || allowedOrigins.includes(origin)) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error('Not allowed by CORS'));
+//     }
+//   },
+// };
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(requestLoggingMiddleware);
