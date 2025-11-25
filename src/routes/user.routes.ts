@@ -12,8 +12,8 @@ userRouter.get('/users', (req, res, next: NextFunction) => userController.getAll
 
 // Protected routes
 userRouter.get('/users/current', authMiddleware, (req, res, next: NextFunction) => userController.getCurrentUser(req as any, res, next));
-userRouter.patch('/users/current', authMiddleware, (req, res, next: NextFunction) => userController.updateUser(req as any, res, next));
 userRouter.delete('/users/current', authMiddleware, (req, res, next: NextFunction) => userController.logout(req as any, res, next));
+userRouter.patch('/users/:username', authMiddleware, (req, res, next: NextFunction) => userController.updateUser(req as any, res, next));
 userRouter.delete('/users/:username', authMiddleware, (req, res, next: NextFunction) => userController.deleteUser(req as any, res, next));
 
 export default userRouter;

@@ -42,12 +42,13 @@ export class UserController {
 
   async updateUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      if (!req.user?.username) {
-        throw new ResponseError(401, 'Unauthorized');
+      const username = req.params.username;
+      if (!username) {
+        throw new ResponseError(400, 'Username is required');
       }
 
       const validatedData = UpdateUserSchema.parse(req.body);
-      const result = await userService.updateUser(req.user.username, validatedData);
+      const result = await userService.updateUser(username, validatedData);
       sendSuccess(res, result);
     } catch (error) {
       next(error);

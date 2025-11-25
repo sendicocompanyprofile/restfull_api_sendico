@@ -139,9 +139,12 @@ curl -X GET http://localhost:3000/api/users/current \
 ---
 
 ### 4. Update User (Protected)
-**PATCH** `/users/current`
+**PATCH** `/users/:username`
 
-Update informasi user (nama dan/atau password).
+Update informasi user berdasarkan username (nama dan/atau password).
+
+**Path Parameters:**
+- `username`: string (required, username dari user yang ingin diupdate)
 
 **Headers:**
 ```
@@ -177,7 +180,7 @@ Content-Type: application/json
 
 **cURL Example:**
 ```bash
-curl -X PATCH http://localhost:3000/api/users/current \
+curl -X PATCH http://localhost:3000/api/users/user123 \
   -H "X-API-TOKEN: uuid-token-string" \
   -H "Content-Type: application/json" \
   -d '{
@@ -185,6 +188,8 @@ curl -X PATCH http://localhost:3000/api/users/current \
     "password": "newpassword123"
   }'
 ```
+}
+}
 
 ---
 
