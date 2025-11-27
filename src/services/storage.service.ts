@@ -1,5 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 /**
  * Cloud Storage Service for Hostinger
@@ -22,14 +23,27 @@ export interface UploadResult {
 
 /**
  * Implementation Note:
- * 
- * Hostinger provides several options for cloud storage:
- * 1. S3-compatible API (recommended)
- * 2. FTP Access
- * 3. File Manager API
- * 
- * For now, we provide a template that you can configure with:
- * - HOSTINGER_STORAGE_TYPE (s3, ftp, or local-for-testing)
+ *
+ * This service supports multiple cloud storage providers:
+ * 1. AWS S3 (recommended for temporary use)
+ * 2. Hostinger S3-compatible API
+ * 3. Hostinger FTP Access
+ * 4. Local filesystem (for development/testing)
+ *
+ * Configure using STORAGE_TYPE environment variable:
+ * - 'aws-s3' for AWS S3
+ * - 's3' for Hostinger S3-compatible
+ * - 'ftp' for Hostinger FTP
+ * - 'local' for local filesystem
+ *
+ * AWS S3 Configuration:
+ * - AWS_ACCESS_KEY_ID
+ * - AWS_SECRET_ACCESS_KEY
+ * - AWS_REGION (default: us-east-1)
+ * - AWS_S3_BUCKET_NAME
+ *
+ * Hostinger Configuration:
+ * - HOSTINGER_STORAGE_TYPE (fallback)
  * - HOSTINGER_API_KEY
  * - HOSTINGER_API_SECRET
  * - HOSTINGER_BUCKET_NAME
@@ -42,19 +56,50 @@ class CloudStorageService {
   private apiSecret: string;
   private bucketName: string;
   private cdnUrl: string;
+  private awsAccessKeyId: string;
+  private awsSecretAccessKey: string;
+  private awsRegion: string;
+  private awsBucketName: string;
+  private s3Client: S3Client | null = null;
 
   constructor() {
-    this.storageType = process.env.HOSTINGER_STORAGE_TYPE || 'local';
+    this.storageType = process.env.STORAGE_TYPE || process.env.HOSTINGER_STORAGE_TYPE || 'local';
     this.apiKey = process.env.HOSTINGER_API_KEY || '';
     this.apiSecret = process.env.HOSTINGER_API_SECRET || '';
     this.bucketName = process.env.HOSTINGER_BUCKET_NAME || '';
     this.cdnUrl = process.env.HOSTINGER_CDN_URL || '';
 
+    // AWS S3 Configuration
+    this.awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
+    this.awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
+    this.awsRegion = process.env.AWS_REGION || 'us-east-1';
+    this.awsBucketName = process.env.AWS_S3_BUCKET_NAME || '';
+
+    // Initialize S3 client if AWS is configured
+    if (this.awsAccessKeyId && this.awsSecretAccessKey) {
+      this.s3Client = new S3Client({
+        region: this.awsRegion,
+        credentials: {
+          accessKeyId: this.awsAccessKeyId,
+          secretAccessKey: this.awsSecretAccessKey,
+        },
+      });
+    }
+
     this.validateConfig();
   }
 
   private validateConfig(): void {
-    if (this.storageType === 's3') {
+    if (this.storageType === 'aws-s3') {
+      if (!this.awsAccessKeyId || !this.awsSecretAccessKey || !this.awsBucketName) {
+        console.warn(
+          '⚠️ AWS S3 credentials not fully configured. Upload may fail.'
+        );
+        console.warn(
+          'Set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME'
+        );
+      }
+    } else if (this.storageType === 's3') {
       if (!this.apiKey || !this.apiSecret || !this.bucketName) {
         console.warn(
           '⚠️ Hostinger S3 credentials not fully configured. Upload may fail.'
@@ -71,13 +116,55 @@ class CloudStorageService {
    * Returns URL that will be stored in database
    */
   async uploadFile(options: UploadOptions): Promise<UploadResult> {
-    if (this.storageType === 's3') {
+    if (this.storageType === 'aws-s3') {
+      return this.uploadToAWSS3(options);
+    } else if (this.storageType === 's3') {
       return this.uploadToS3(options);
     } else if (this.storageType === 'ftp') {
       return this.uploadToFTP(options);
     } else {
       // Local storage for development/testing
       return this.uploadToLocal(options);
+    }
+  }
+
+  /**
+   * Upload to AWS S3
+   * Uses official AWS SDK v3
+   */
+  private async uploadToAWSS3(options: UploadOptions): Promise<UploadResult> {
+    try {
+      if (!this.s3Client) {
+        throw new Error('AWS S3 client not initialized. Check your AWS credentials.');
+      }
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(7);
+      const fileName = `uploads/${timestamp}-${randomStr}-${options.fileName}`;
+
+      const command = new PutObjectCommand({
+        Bucket: this.awsBucketName,
+        Key: fileName,
+        Body: options.fileBuffer,
+        ContentType: options.mimeType,
+        ACL: 'public-read', // Make file publicly accessible
+      });
+
+      await this.s3Client.send(command);
+
+      // Construct public URL
+      const url = `https://${this.awsBucketName}.s3.${this.awsRegion}.amazonaws.com/${fileName}`;
+
+      return {
+        url,
+        fileName: options.fileName,
+        size: options.fileBuffer.length,
+      };
+    } catch (error) {
+      throw new Error(
+        `AWS S3 upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -93,7 +180,7 @@ class CloudStorageService {
 
       /*
       Example implementation:
-      
+
       const AWS = require('aws-sdk');
       const s3 = new AWS.S3({
         accessKeyId: this.apiKey,
@@ -112,8 +199,8 @@ class CloudStorageService {
       };
 
       const result = await s3.upload(params).promise();
-      
-      const url = this.cdnUrl 
+
+      const url = this.cdnUrl
         ? `${this.cdnUrl}/${params.Key}`
         : result.Location;
 
@@ -125,11 +212,11 @@ class CloudStorageService {
       */
 
       throw new Error(
-        'S3 upload not yet configured. Please setup AWS SDK configuration'
+        'Hostinger S3 upload not yet configured. Please setup Hostinger S3 configuration'
       );
     } catch (error) {
       throw new Error(
-        `S3 upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Hostinger S3 upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
@@ -226,9 +313,28 @@ class CloudStorageService {
    */
   async deleteFile(fileName: string): Promise<void> {
     try {
-      if (this.storageType === 's3') {
-        // TODO: Implement S3 delete
-        console.log(`S3 delete not implemented for: ${fileName}`);
+      if (this.storageType === 'aws-s3') {
+        if (!this.s3Client) {
+          throw new Error('AWS S3 client not initialized.');
+        }
+
+        // Extract key from URL or use filename directly
+        let key = fileName;
+        if (fileName.startsWith('https://')) {
+          // Extract key from S3 URL
+          const urlParts = fileName.split('/');
+          key = urlParts.slice(3).join('/'); // Remove bucket and region parts
+        }
+
+        const command = new DeleteObjectCommand({
+          Bucket: this.awsBucketName,
+          Key: key,
+        });
+
+        await this.s3Client.send(command);
+      } else if (this.storageType === 's3') {
+        // TODO: Implement Hostinger S3 delete
+        console.log(`Hostinger S3 delete not implemented for: ${fileName}`);
       } else if (this.storageType === 'ftp') {
         // TODO: Implement FTP delete
         console.log(`FTP delete not implemented for: ${fileName}`);
