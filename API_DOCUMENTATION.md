@@ -316,7 +316,9 @@ Content-Type: multipart/form-data
     "description": "Ini adalah deskripsi postingan",
     "date": "2025-11-13",
     "pictures": [
-      "https://cloud-url.com/image1.jpg"
+      "https://cloud-url.com/randomNameImage_1.jpg",
+      "https://cloud-url.com/randomNameImage_2.jpg",
+      "https://cloud-url.com/randomNameImage_3.jpg"
     ],
     "createdAt": "2025-11-13T07:00:11.000Z",
     "updatedAt": "2025-11-13T07:00:11.000Z"
@@ -363,7 +365,7 @@ Mendapatkan daftar semua postings dengan pagination dan search.
       "title": "Postingan Pertama",
       "description": "Ini adalah deskripsi postingan",
       "date": "2025-11-13",
-      "pictures": ["https://cloud-url.com/image1.jpg"],
+      "pictures": ["https://cloud-url.com/randomNameImage_1.jpg", "https://cloud-url.com/randomNameImage_2.jpg", "https://cloud-url.com/randomNameImage_3.jpg"],
       "createdAt": "2025-11-13T07:00:11.000Z",
       "updatedAt": "2025-11-13T07:00:11.000Z"
     }
@@ -403,7 +405,7 @@ Mendapatkan detail posting berdasarkan ID.
     "title": "Postingan Pertama",
     "description": "Ini adalah deskripsi postingan",
     "date": "2025-11-13",
-    "pictures": ["https://cloud-url.com/image1.jpg"],
+    "pictures": ["https://cloud-url.com/randomNameImage_1.jpg", "https://cloud-url.com/randomNameImage_2.jpg", "https://cloud-url.com/randomNameImage_3.jpg"],
     "createdAt": "2025-11-13T07:00:11.000Z",
     "updatedAt": "2025-11-13T07:00:11.000Z"
   }
@@ -452,7 +454,7 @@ Content-Type: multipart/form-data
     "title": "Postingan Updated",
     "description": "Deskripsi yang sudah diupdate",
     "date": "2025-11-14",
-    "pictures": ["https://cloud-url.com/image1.jpg"],
+    "pictures": ["https://cloud-url.com/randomNameImage_1.jpg", "https://cloud-url.com/randomNameImage_2.jpg", "https://cloud-url.com/randomNameImage_3.jpg"],
     "createdAt": "2025-11-13T07:00:11.000Z",
     "updatedAt": "2025-11-13T07:10:00.000Z"
   }
@@ -531,7 +533,7 @@ Content-Type: multipart/form-data
     "title": "Blog Post Pertama",
     "description": "Ini adalah deskripsi blog post",
     "date": "2025-11-13",
-    "picture": "https://cloud-url.com/blog-image.jpg",
+    "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
     "create_at": "2025-11-13T07:00:11.000Z",
     "update_at": "2025-11-13T07:00:11.000Z"
   }
@@ -576,7 +578,7 @@ Mendapatkan daftar semua blog posts dengan pagination dan search.
       "title": "Blog Post Pertama",
       "description": "Ini adalah deskripsi blog post",
       "date": "2025-11-13",
-      "picture": "https://cloud-url.com/blog-image.jpg",
+      "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
       "create_at": "2025-11-13T07:00:11.000Z",
       "update_at": "2025-11-13T07:00:11.000Z"
     }
@@ -616,7 +618,7 @@ Mendapatkan detail blog post berdasarkan ID.
     "title": "Blog Post Pertama",
     "description": "Ini adalah deskripsi blog post",
     "date": "2025-11-13",
-    "picture": "https://cloud-url.com/blog-image.jpg",
+    "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
     "create_at": "2025-11-13T07:00:11.000Z",
     "update_at": "2025-11-13T07:00:11.000Z"
   }
@@ -665,7 +667,7 @@ Content-Type: multipart/form-data
     "title": "Blog Post Updated",
     "description": "Deskripsi yang sudah diupdate",
     "date": "2025-11-14",
-    "picture": "https://cloud-url.com/new-blog-image.jpg",
+    "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
     "create_at": "2025-11-13T07:00:11.000Z",
     "update_at": "2025-11-13T07:10:00.000Z"
   }

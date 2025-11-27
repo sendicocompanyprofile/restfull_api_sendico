@@ -1,7 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import dotenv from 'dotenv';
 
+// Load environment variables
+dotenv.config();
 /**
  * Cloud Storage Service for Hostinger
  * 
@@ -72,7 +75,7 @@ class CloudStorageService {
     // AWS S3 Configuration
     this.awsAccessKeyId = process.env.AWS_ACCESS_KEY || '';
     this.awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
-    this.awsRegion = process.env.BUCKET_REGION || 'us-east-1';
+    this.awsRegion = process.env.BUCKET_REGION || '';
     this.awsBucketName = process.env.BUCKET_NAME || '';
 
     // Initialize S3 client if AWS is configured
