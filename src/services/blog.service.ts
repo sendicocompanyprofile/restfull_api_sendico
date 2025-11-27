@@ -2,6 +2,7 @@ import { getPrismaClient } from '../utils/prisma.js';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../utils/logger.js';
 import { ResponseError } from '../utils/errors.js';
+import { cloudStorageService } from './storage.service.js';
 import type { CreateBlogType, UpdateBlogType, SearchBlogType } from '../validators/blog.validator.js';
 
 interface BlogResponse {
@@ -113,7 +114,7 @@ class BlogService {
   async updateBlog(id: string, data: UpdateBlogType): Promise<BlogResponse> {
     // Check if blog exists
     const existingBlog = await this.prisma.blog.findUnique({ where: { id } });
-    
+
     if (!existingBlog) {
       logger.warn('Blog not found for update', { blogId: id });
       throw new ResponseError(404, 'Blog not found');
@@ -122,7 +123,21 @@ class BlogService {
     const updateData: any = {};
     if (data.title !== undefined) updateData.title = data.title;
     if (data.description !== undefined) updateData.description = data.description;
-    if (data.picture !== undefined) updateData.picture = data.picture;
+    if (data.picture !== undefined) {
+      // Delete old picture if a new one is provided and old one exists
+      if (existingBlog.picture && existingBlog.picture.trim() !== '') {
+        try {
+          await cloudStorageService.deleteFile(existingBlog.picture);
+        } catch (error) {
+          logger.warn('Failed to delete old picture during blog update', {
+            blogId: id,
+            pictureUrl: existingBlog.picture,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+      updateData.picture = data.picture;
+    }
     if (data.date !== undefined) {
       updateData.date = new Date(data.date);
     }
@@ -139,10 +154,23 @@ class BlogService {
   // Delete blog
   async deleteBlog(id: string): Promise<void> {
     const blog = await this.prisma.blog.findUnique({ where: { id } });
-    
+
     if (!blog) {
       logger.warn('Blog not found for delete', { blogId: id });
       throw new ResponseError(404, 'Blog not found');
+    }
+
+    // Delete associated picture from storage
+    if (blog.picture && blog.picture.trim() !== '') {
+      try {
+        await cloudStorageService.deleteFile(blog.picture);
+      } catch (error) {
+        logger.warn('Failed to delete picture during blog deletion', {
+          blogId: id,
+          pictureUrl: blog.picture,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
     }
 
     await this.prisma.blog.delete({ where: { id } });

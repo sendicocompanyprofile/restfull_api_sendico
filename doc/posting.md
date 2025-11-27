@@ -12,7 +12,7 @@ Request Body :
     "tittle"        : "Posting 1",
     "description"   : "ini deskripsi Posting 1",
     "date"          : "12 November 2025",
-    "Picture"       : [
+    "Pictures"       : [
         1 : "dacaxxacxa.jpg",
         2 : "dacxacxacsa.jpg",
         3 : "dacxacacxa.jpg",

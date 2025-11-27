@@ -1,6 +1,7 @@
 import { getPrismaClient } from '../utils/prisma.js';
 import { logger } from '../utils/logger.js';
 import { ResponseError } from '../utils/errors.js';
+import { cloudStorageService } from './storage.service.js';
 import type { CreatePostingRequest, UpdatePostingRequest, SearchPostingQuery } from '../validators/posting.validator.js';
 import type { PostingResponse } from '../types/index.js';
 
@@ -105,6 +106,30 @@ export class PostingService {
     }
 
     if (request.pictures) {
+      // Delete old pictures if new ones are provided
+      try {
+        const oldPicturesData = JSON.parse(String(posting.pictures || '[]')) as unknown;
+        const oldPictures = Array.isArray(oldPicturesData) ? oldPicturesData : [];
+        for (const oldPictureUrl of oldPictures) {
+          if (typeof oldPictureUrl === 'string') {
+            try {
+              await cloudStorageService.deleteFile(oldPictureUrl);
+            } catch (error) {
+              logger.warn('Failed to delete old picture during posting update', {
+                postingId: id,
+                pictureUrl: oldPictureUrl,
+                error: error instanceof Error ? error.message : String(error)
+              });
+            }
+          }
+        }
+      } catch (parseError) {
+        logger.warn('Failed to parse old pictures data during posting update', {
+          postingId: id,
+          error: parseError instanceof Error ? parseError.message : String(parseError)
+        });
+      }
+
       updateData.pictures = JSON.stringify(request.pictures);
     }
 
@@ -127,6 +152,30 @@ export class PostingService {
       throw new ResponseError(404, 'Posting not found');
     }
 
+    // Delete associated pictures from storage
+    try {
+      const picturesData = JSON.parse(String(posting.pictures || '[]')) as unknown;
+      const pictures = Array.isArray(picturesData) ? picturesData : [];
+      for (const pictureUrl of pictures) {
+        if (typeof pictureUrl === 'string') {
+          try {
+            await cloudStorageService.deleteFile(pictureUrl);
+          } catch (error) {
+            logger.warn('Failed to delete picture during posting deletion', {
+              postingId: id,
+              pictureUrl,
+              error: error instanceof Error ? error.message : String(error)
+            });
+          }
+        }
+      }
+    } catch (parseError) {
+      logger.warn('Failed to parse pictures data during posting deletion', {
+        postingId: id,
+        error: parseError instanceof Error ? parseError.message : String(parseError)
+      });
+    }
+
     await this.prisma.posting.delete({
       where: { id },
     });
@@ -135,12 +184,23 @@ export class PostingService {
   }
 
   private formatPosting(posting: any): PostingResponse {
+    let pictures: string[] = [];
+    try {
+      const picturesData = JSON.parse(posting.pictures || '[]');
+      pictures = Array.isArray(picturesData) ? picturesData.filter((item: any) => typeof item === 'string') : [];
+    } catch (error) {
+      logger.warn('Failed to parse pictures data in formatPosting', {
+        postingId: posting.id,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+
     return {
       id: posting.id,
       title: posting.title,
       description: posting.description,
       date: posting.date.toISOString().split('T')[0],
-      pictures: JSON.parse(posting.pictures),
+      pictures,
       createdAt: posting.createdAt.toISOString(),
       updatedAt: posting.updatedAt.toISOString(),
     };

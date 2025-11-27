@@ -138,14 +138,15 @@ class CloudStorageService {
         throw new Error('AWS S3 client not initialized. Check your AWS credentials.');
       }
 
-      // Generate unique filename
+      // Generate unique filename with extension
       const timestamp = Date.now();
-      const randomStr = Math.random().toString(36).substring(7);
-      const fileName = `uploads/${timestamp}-${randomStr}-${options.fileName}`;
+      const randomStr = Math.random().toString(36).substring(2, 15); // More random chars
+      const fileExtension = this.getFileExtension(options.fileName);
+      const uniqueFileName = `uploads/${timestamp}-${randomStr}.${fileExtension}`;
 
       const command = new PutObjectCommand({
         Bucket: this.awsBucketName,
-        Key: fileName,
+        Key: uniqueFileName,
         Body: options.fileBuffer,
         ContentType: options.mimeType,
         ACL: 'public-read', // Make file publicly accessible
@@ -154,11 +155,11 @@ class CloudStorageService {
       await this.s3Client.send(command);
 
       // Construct public URL
-      const url = `https://${this.awsBucketName}.s3.${this.awsRegion}.amazonaws.com/${fileName}`;
+      const url = `https://${this.awsBucketName}.s3.${this.awsRegion}.amazonaws.com/${uniqueFileName}`;
 
       return {
         url,
-        fileName: options.fileName,
+        fileName: uniqueFileName, // Return the unique filename
         size: options.fileBuffer.length,
       };
     } catch (error) {
@@ -166,6 +167,14 @@ class CloudStorageService {
         `AWS S3 upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
+  }
+
+  /**
+   * Extract file extension from filename
+   */
+  private getFileExtension(fileName: string): string {
+    const lastDotIndex = fileName.lastIndexOf('.');
+    return lastDotIndex !== -1 ? fileName.substring(lastDotIndex + 1) : '';
   }
 
   /**
