@@ -5,27 +5,33 @@ import { sendSuccess } from '../utils/response.js';
 import { CreatePostingSchema, UpdatePostingSchema, SearchPostingSchema } from '../validators/posting.validator.js';
 import type { AuthenticatedRequest } from '../middleware/auth.js';
 import { ResponseError } from '../utils/errors.js';
+import { logger } from '../utils/logger.js';
 
 export class PostingController {
   async createPosting(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
       // Check if files are uploaded
       const files = req.files as Express.Multer.File[] | undefined;
-      let picturUrls: string[] = [];
+      let pictureUrls: string[] = [];
 
       // Optional: Upload files to cloud storage if provided
       if (files && files.length > 0) {
         if (files.length > 3) {
-          throw new ResponseError(400, 'Maximum 3 pictures allowed');
+          throw new ResponseError(400, 'Maximum 3 pictures allowed per posting');
         }
 
-        for (const file of files) {
-          const uploadResult = await cloudStorageService.uploadFile({
-            fileName: file.originalname,
-            fileBuffer: file.buffer,
-            mimeType: file.mimetype,
-          });
-          picturUrls.push(uploadResult.url);
+        try {
+          for (const file of files) {
+            const uploadResult = await cloudStorageService.uploadFile({
+              fileName: file.originalname,
+              fileBuffer: file.buffer,
+              mimeType: file.mimetype,
+            });
+            pictureUrls.push(uploadResult.url);
+          }
+        } catch (uploadError) {
+          // If upload fails, throw a more descriptive error
+          throw new ResponseError(500, `Failed to upload pictures: ${uploadError instanceof Error ? uploadError.message : 'Unknown upload error'}`);
         }
       }
 
@@ -34,14 +40,22 @@ export class PostingController {
         title: req.body.title,
         description: req.body.description,
         date: req.body.date,
-        pictures: picturUrls,
+        pictures: pictureUrls,
       });
 
       // Create posting in database
       const result = await postingService.createPosting(validatedData);
       sendSuccess(res, result, 201);
     } catch (error) {
-      next(error);
+      // Enhanced error handling with more specific messages
+      if (error instanceof ResponseError) {
+        next(error);
+      } else {
+        logger.error('Create posting failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        next(new ResponseError(500, 'Failed to create posting'));
+      }
     }
   }
 
@@ -79,22 +93,27 @@ export class PostingController {
       }
 
       // Handle file uploads if provided
-      let picturUrls: string[] | undefined;
+      let pictureUrls: string[] | undefined;
       const files = req.files as Express.Multer.File[] | undefined;
 
       if (files && files.length > 0) {
         if (files.length > 3) {
-          throw new ResponseError(400, 'Maximum 3 pictures allowed');
+          throw new ResponseError(400, 'Maximum 3 pictures allowed per posting');
         }
 
-        picturUrls = [];
-        for (const file of files) {
-          const uploadResult = await cloudStorageService.uploadFile({
-            fileName: file.originalname,
-            fileBuffer: file.buffer,
-            mimeType: file.mimetype,
-          });
-          picturUrls.push(uploadResult.url);
+        try {
+          pictureUrls = [];
+          for (const file of files) {
+            const uploadResult = await cloudStorageService.uploadFile({
+              fileName: file.originalname,
+              fileBuffer: file.buffer,
+              mimeType: file.mimetype,
+            });
+            pictureUrls.push(uploadResult.url);
+          }
+        } catch (uploadError) {
+          // If upload fails, throw a more descriptive error
+          throw new ResponseError(500, `Failed to upload pictures: ${uploadError instanceof Error ? uploadError.message : 'Unknown upload error'}`);
         }
       }
 
@@ -105,8 +124,8 @@ export class PostingController {
         date: req.body.date,
       };
 
-      if (picturUrls) {
-        updateData.pictures = picturUrls;
+      if (pictureUrls) {
+        updateData.pictures = pictureUrls;
       }
 
       const validatedData = UpdatePostingSchema.parse(updateData);
