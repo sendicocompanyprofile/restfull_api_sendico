@@ -66,14 +66,17 @@ class CloudStorageService {
   private s3Client: S3Client | null = null;
 
   constructor() {
-    this.storageType = process.env.STORAGE_TYPE || process.env.HOSTINGER_STORAGE_TYPE || 'local';
+    // Detect serverless environment (Vercel, Netlify, etc.)
+    const isServerless = process.env.VERCEL || process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT;
+
+    this.storageType = process.env.STORAGE_TYPE || process.env.HOSTINGER_STORAGE_TYPE || (isServerless ? 'aws-s3' : 'local');
     this.apiKey = process.env.HOSTINGER_API_KEY || '';
     this.apiSecret = process.env.HOSTINGER_API_SECRET || '';
     this.bucketName = process.env.HOSTINGER_BUCKET_NAME || '';
     this.cdnUrl = process.env.HOSTINGER_CDN_URL || '';
 
     // AWS S3 Configuration
-    this.awsAccessKeyId = process.env.AWS_ACCESS_KEY || '';
+    this.awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
     this.awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
     this.awsRegion = process.env.BUCKET_REGION || '';
     this.awsBucketName = process.env.BUCKET_NAME || '';
@@ -128,6 +131,35 @@ class CloudStorageService {
     } else {
       // Local storage for development/testing
       return this.uploadToLocal(options);
+    }
+  }
+
+  /**
+   * Check if storage is properly configured
+   * Throws error if no valid storage method is available
+   */
+  validateStorageConfig(): void {
+    const isServerless = process.env.VERCEL || process.env.NETLIFY || process.env.LAMBDA_TASK_ROOT;
+
+    if (isServerless && this.storageType === 'local') {
+      throw new Error(
+        'Local storage is not available in serverless environments. ' +
+        'Please configure AWS S3 or Hostinger storage: ' +
+        'Set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, BUCKET_REGION ' +
+        'or HOSTINGER_API_KEY, HOSTINGER_API_SECRET, HOSTINGER_BUCKET_NAME'
+      );
+    }
+
+    if (this.storageType === 'aws-s3' && (!this.awsAccessKeyId || !this.awsSecretAccessKey || !this.awsBucketName)) {
+      throw new Error(
+        'AWS S3 not configured. Please set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME, BUCKET_REGION'
+      );
+    }
+
+    if (this.storageType === 's3' && (!this.apiKey || !this.apiSecret || !this.bucketName)) {
+      throw new Error(
+        'Hostinger S3 not configured. Please set: HOSTINGER_API_KEY, HOSTINGER_API_SECRET, HOSTINGER_BUCKET_NAME'
+      );
     }
   }
 

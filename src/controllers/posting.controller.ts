@@ -92,6 +92,9 @@ export class PostingController {
         throw new ResponseError(400, 'Posting ID is required');
       }
 
+      // Validate storage configuration first
+      cloudStorageService.validateStorageConfig();
+
       // Handle file uploads if provided
       let pictureUrls: string[] | undefined;
       const files = req.files as Express.Multer.File[] | undefined;
