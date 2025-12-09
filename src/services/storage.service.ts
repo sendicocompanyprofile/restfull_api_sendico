@@ -76,10 +76,10 @@ class CloudStorageService {
     this.cdnUrl = process.env.HOSTINGER_CDN_URL || '';
 
     // AWS S3 Configuration
-    this.awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || '';
+    this.awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY || '';
     this.awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || '';
-    this.awsRegion = process.env.BUCKET_REGION || '';
-    this.awsBucketName = process.env.BUCKET_NAME || '';
+    this.awsRegion = process.env.BUCKET_REGION || process.env.AWS_REGION || 'us-east-1';
+    this.awsBucketName = process.env.BUCKET_NAME || process.env.AWS_S3_BUCKET_NAME || '';
 
     // Initialize S3 client if AWS is configured
     if (this.awsAccessKeyId && this.awsSecretAccessKey) {
@@ -184,7 +184,7 @@ class CloudStorageService {
         Key: uniqueFileName,
         Body: options.fileBuffer,
         ContentType: options.mimeType,
-        ACL: 'public-read', // Make file publicly accessible
+        // Remove ACL - use bucket policy instead for access control
       });
 
       await this.s3Client.send(command);
