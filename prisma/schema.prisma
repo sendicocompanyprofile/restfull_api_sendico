@@ -28,11 +28,21 @@ model Posting {
   title       String   @db.VarChar(255)
   description String   @db.Text
   date        DateTime @db.Date
-  pictures    Json     @default("[]") // Array of up to 3 image URLs
   createdAt   DateTime @default(now()) @db.Timestamp(0)
   updatedAt   DateTime @default(now()) @db.Timestamp(0)
+  pictures    Picture[]
 
   @@map("postings")
+}
+
+model Picture {
+  id        String  @id @default(uuid()) @db.Char(36)
+  url       String  @db.VarChar(255)
+  postingId String  @db.Char(36)
+  posting   Posting @relation(fields: [postingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamp(0)
+
+  @@map("pictures")
 }
 
 model Blog {

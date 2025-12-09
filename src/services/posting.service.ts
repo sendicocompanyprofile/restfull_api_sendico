@@ -16,7 +16,12 @@ export class PostingService {
           title: request.title,
           description: request.description,
           date: new Date(request.date),
-          pictures: JSON.stringify(request.pictures || []),
+          pictures: {
+            create: (request.pictures || []).map(url => ({ url })),
+          },
+        },
+        include: {
+          pictures: true,
         },
       });
 
@@ -32,6 +37,11 @@ export class PostingService {
   async getPostingById(id: string): Promise<PostingResponse> {
     const posting = await this.prisma.posting.findUnique({
       where: { id },
+      include: {
+        pictures: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     if (!posting) {
@@ -65,6 +75,11 @@ export class PostingService {
         skip,
         take: query.size,
         orderBy: { createdAt: 'desc' },
+        include: {
+          pictures: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
       }),
       this.prisma.posting.count({ where }),
     ]);
@@ -72,7 +87,7 @@ export class PostingService {
     const totalPage = Math.ceil(total / query.size);
 
     return {
-      data: postings.map((posting: any) => this.formatPosting(posting)),
+      data: postings.map(posting => this.formatPosting(posting)),
       paging: {
         current_page: query.page,
         total_page: totalPage,
@@ -84,6 +99,9 @@ export class PostingService {
   async updatePosting(id: string, request: UpdatePostingRequest): Promise<PostingResponse> {
     const posting = await this.prisma.posting.findUnique({
       where: { id },
+      include: {
+        pictures: true,
+      },
     });
 
     if (!posting) {
@@ -106,36 +124,34 @@ export class PostingService {
     }
 
     if (request.pictures) {
-      // Delete old pictures if new ones are provided
-      try {
-        const oldPicturesData = JSON.parse(String(posting.pictures || '[]')) as unknown;
-        const oldPictures = Array.isArray(oldPicturesData) ? oldPicturesData : [];
-        for (const oldPictureUrl of oldPictures) {
-          if (typeof oldPictureUrl === 'string') {
-            try {
-              await cloudStorageService.deleteFile(oldPictureUrl);
-            } catch (error) {
-              logger.warn('Failed to delete old picture during posting update', {
-                postingId: id,
-                pictureUrl: oldPictureUrl,
-                error: error instanceof Error ? error.message : String(error)
-              });
-            }
-          }
+      // Delete old pictures from storage if new ones are provided
+      for (const oldPicture of posting.pictures) {
+        try {
+          await cloudStorageService.deleteFile(oldPicture.url);
+        } catch (error) {
+          logger.warn('Failed to delete old picture during posting update', {
+            postingId: id,
+            pictureUrl: oldPicture.url,
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
-      } catch (parseError) {
-        logger.warn('Failed to parse old pictures data during posting update', {
-          postingId: id,
-          error: parseError instanceof Error ? parseError.message : String(parseError)
-        });
       }
 
-      updateData.pictures = JSON.stringify(request.pictures);
+      // Delete old picture records and create new ones
+      updateData.pictures = {
+        deleteMany: {},
+        create: request.pictures.map(url => ({ url })),
+      };
     }
 
     const updatedPosting = await this.prisma.posting.update({
       where: { id },
       data: updateData,
+      include: {
+        pictures: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     logger.info('Posting updated successfully', { postingId: id });
@@ -145,6 +161,9 @@ export class PostingService {
   async deletePosting(id: string): Promise<void> {
     const posting = await this.prisma.posting.findUnique({
       where: { id },
+      include: {
+        pictures: true,
+      },
     });
 
     if (!posting) {
@@ -153,27 +172,16 @@ export class PostingService {
     }
 
     // Delete associated pictures from storage
-    try {
-      const picturesData = JSON.parse(String(posting.pictures || '[]')) as unknown;
-      const pictures = Array.isArray(picturesData) ? picturesData : [];
-      for (const pictureUrl of pictures) {
-        if (typeof pictureUrl === 'string') {
-          try {
-            await cloudStorageService.deleteFile(pictureUrl);
-          } catch (error) {
-            logger.warn('Failed to delete picture during posting deletion', {
-              postingId: id,
-              pictureUrl,
-              error: error instanceof Error ? error.message : String(error)
-            });
-          }
-        }
+    for (const picture of posting.pictures) {
+      try {
+        await cloudStorageService.deleteFile(picture.url);
+      } catch (error) {
+        logger.warn('Failed to delete picture during posting deletion', {
+          postingId: id,
+          pictureUrl: picture.url,
+          error: error instanceof Error ? error.message : String(error)
+        });
       }
-    } catch (parseError) {
-      logger.warn('Failed to parse pictures data during posting deletion', {
-        postingId: id,
-        error: parseError instanceof Error ? parseError.message : String(parseError)
-      });
     }
 
     await this.prisma.posting.delete({
@@ -184,16 +192,7 @@ export class PostingService {
   }
 
   private formatPosting(posting: any): PostingResponse {
-    let pictures: string[] = [];
-    try {
-      const picturesData = JSON.parse(posting.pictures || '[]');
-      pictures = Array.isArray(picturesData) ? picturesData.filter((item: any) => typeof item === 'string') : [];
-    } catch (error) {
-      logger.warn('Failed to parse pictures data in formatPosting', {
-        postingId: posting.id,
-        error: error instanceof Error ? error.message : String(error)
-      });
-    }
+    const pictures: string[] = posting.pictures ? posting.pictures.map((pic: any) => pic.url) : [];
 
     return {
       id: posting.id,
