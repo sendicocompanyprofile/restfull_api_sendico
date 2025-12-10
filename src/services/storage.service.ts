@@ -184,6 +184,7 @@ class CloudStorageService {
         Key: uniqueFileName,
         Body: options.fileBuffer,
         ContentType: options.mimeType,
+        ACL: 'public-read',
         // Remove ACL - use bucket policy instead for access control
       });
 
