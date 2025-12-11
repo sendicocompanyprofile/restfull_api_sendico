@@ -129,11 +129,12 @@ export class PostingService {
         try {
           await cloudStorageService.deleteFile(oldPicture.url);
         } catch (error) {
-          logger.warn('Failed to delete old picture during posting update', {
+          logger.error('Failed to delete old picture during posting update', {
             postingId: id,
             pictureUrl: oldPicture.url,
             error: error instanceof Error ? error.message : String(error)
           });
+          throw new ResponseError(500, `Failed to delete old pictures during update: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 

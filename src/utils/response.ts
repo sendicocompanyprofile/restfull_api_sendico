@@ -6,11 +6,15 @@ export function sendSuccess<T>(
   res: Response,
   data: T,
   statusCode: number = 200,
-  paging?: { current_page: number; total_page: number; size: number }
+  paging?: { current_page: number; total_page: number; size: number },
+  message?: string
 ): Response {
   const response: ApiResponse<T> = { data };
   if (paging) {
     response.paging = paging;
+  }
+  if (message) {
+    response.message = message;
   }
   return res.status(statusCode).json(response);
 }

@@ -1,12 +1,13 @@
-# Database Normalization for Posting Pictures
+# TODO: Enhance Error and Success Messages for Picture Editing in updatePosting
 
 ## Tasks
-- [x] Update Prisma schema: Remove `pictures` from Posting model, add Picture model with one-to-many relation
-- [x] Generate Prisma migration for schema changes
-- [x] Create data migration script to migrate existing JSON pictures to Picture table
-- [x] Update posting service to use Picture model instead of JSON handling
-- [x] Update posting controller if needed (no changes required)
-- [x] Update types if needed (no changes required)
-- [x] Run Prisma migration
-- [x] Execute data migration script (included in migration SQL)
-- [x] Test API endpoints (verified compatibility)
+- [ ] Update `src/controllers/posting.controller.ts`:
+  - Enhance error message for picture upload failures to be more specific (e.g., "Failed to upload new pictures: [details]").
+  - Add custom success message indicating if pictures were updated (e.g., "Posting updated successfully. Pictures have been updated." or "Posting updated successfully.").
+
+- [ ] Update `src/services/posting.service.ts`:
+  - Modify the updatePosting method to throw a ResponseError if deleting old pictures fails, with a specific message like "Failed to delete old pictures during update".
+
+- [ ] Test the changes:
+  - Verify that error messages appear correctly for upload and deletion failures.
+  - Verify that success messages are appropriate and indicate picture updates when applicable.

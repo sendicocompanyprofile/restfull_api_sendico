@@ -9,6 +9,7 @@ export interface ApiResponse<T> {
     total_page: number;
     size: number;
   };
+  message?: string;
 }
 
 // User types

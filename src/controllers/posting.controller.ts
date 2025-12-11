@@ -31,7 +31,7 @@ export class PostingController {
           }
         } catch (uploadError) {
           // If upload fails, throw a more descriptive error
-          throw new ResponseError(500, `Failed to upload pictures: ${uploadError instanceof Error ? uploadError.message : 'Unknown upload error'}`);
+          throw new ResponseError(500, `Failed to upload new pictures: ${uploadError instanceof Error ? uploadError.message : 'Unknown upload error'}`);
         }
       }
 
@@ -133,7 +133,8 @@ export class PostingController {
 
       const validatedData = UpdatePostingSchema.parse(updateData);
       const result = await postingService.updatePosting(id, validatedData);
-      sendSuccess(res, result);
+      const message = pictureUrls ? 'Posting updated successfully. Pictures have been updated.' : 'Posting updated successfully.';
+      sendSuccess(res, result, 200, undefined, message);
     } catch (error) {
       next(error);
     }
