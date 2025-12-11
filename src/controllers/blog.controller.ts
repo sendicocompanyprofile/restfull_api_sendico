@@ -95,7 +95,7 @@ class BlogController {
       // Validate request body
       const data = UpdateBlogSchema.parse(updateData);
       const updatedBlog = await blogService.updateBlog(id, data);
-      sendSuccess(res, updatedBlog, 200);
+      sendSuccess(res, updatedBlog, 200, undefined, 'Blog updated successfully');
     } catch (error) {
       next(error);
     }
