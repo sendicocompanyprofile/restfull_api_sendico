@@ -184,8 +184,7 @@ class CloudStorageService {
         Key: uniqueFileName,
         Body: options.fileBuffer,
         ContentType: options.mimeType,
-        ACL: 'public-read',
-        // Remove ACL - use bucket policy instead for access control
+        // ACL removed - use bucket policy for access control
       });
 
       await this.s3Client.send(command);
