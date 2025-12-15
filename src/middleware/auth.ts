@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { userService } from '../services/user.service.js';
+import { verifyToken } from '../utils/token.js';
 import { ResponseError } from '../utils/errors.js';
 
 export interface AuthenticatedRequest extends Request {
@@ -13,26 +13,35 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
-  const token = req.headers['x-api-token'] as string;
+  // Accept both 'x-api-token' header and standard 'Authorization: Bearer' header
+  let token = req.headers['x-api-token'] as string;
+  
+  if (!token) {
+    // Try Authorization header (Bearer scheme)
+    const authHeader = req.headers.authorization as string;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    }
+  }
 
   if (!token) {
     throw new ResponseError(401, 'Unauthorized - Token required');
   }
 
   try {
-    // Find user by token
-    const username = await userService.getUserByToken(token);
+    // Verify JWT token
+    const payload = verifyToken(token);
     
-    if (!username) {
-      throw new ResponseError(401, 'Unauthorized - Invalid token');
+    if (!payload) {
+      throw new ResponseError(401, 'Unauthorized - Invalid or expired token');
     }
 
-    req.user = { username };
+    req.user = { username: payload.username };
     next();
   } catch (error) {
     if (error instanceof ResponseError) {
       throw error;
     }
-    throw new ResponseError(401, 'Unauthorized');
+    throw new ResponseError(401, 'Unauthorized - Invalid token');
   }
 }

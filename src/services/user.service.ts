@@ -85,14 +85,8 @@ export class UserService {
         throw new ResponseError(401, 'Username or password is incorrect');
       }
 
-      // Generate token
-      const token = generateToken();
-
-      // Update user token
-      await this.prisma.user.update({
-        where: { username: user.username },
-        data: { token },
-      });
+      // Generate JWT token (stateless, no need to store in database)
+      const token = generateToken(user.username);
 
       logger.info('User logged in successfully', {
         username: user.username,
@@ -201,11 +195,8 @@ export class UserService {
 
   async logout(username: string): Promise<void> {
     try {
-      await this.prisma.user.update({
-        where: { username },
-        data: { token: null },
-      });
-
+      // JWT tokens are stateless, no database update needed
+      // Client should discard the token on their end
       logger.info('User logged out successfully', {
         username,
       });
@@ -267,14 +258,6 @@ export class UserService {
       });
       throw new ResponseError(500, 'Failed to delete user');
     }
-  }
-
-  async getUserByToken(token: string): Promise<string | null> {
-    const user = await this.prisma.user.findFirst({
-      where: { token },
-    });
-
-    return user?.username || null;
   }
 }
 
