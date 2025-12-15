@@ -10,6 +10,11 @@ class BlogController {
   // Create Blog - Protected with file upload
   async createBlog(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Verify user is authenticated
+      if (!req.user?.username) {
+        throw new ResponseError(401, 'Unauthorized - Username required');
+      }
+
       // Check if file is uploaded
       const file = req.file as Express.Multer.File | undefined;
       let pictureUrl = '';
@@ -32,7 +37,7 @@ class BlogController {
         picture: pictureUrl || undefined,
       });
 
-      const blog = await blogService.createBlog(validatedData);
+      const blog = await blogService.createBlog(validatedData, req.user.username);
       sendSuccess(res, blog, 201);
     } catch (error) {
       next(error);
@@ -75,6 +80,11 @@ class BlogController {
         throw new ResponseError(400, 'Blog ID is required');
       }
 
+      // Verify user is authenticated
+      if (!req.user?.username) {
+        throw new ResponseError(401, 'Unauthorized - Username required');
+      }
+
       // Build update data
       const updateData: any = {
         title: req.body.title,
@@ -94,7 +104,7 @@ class BlogController {
 
       // Validate request body
       const data = UpdateBlogSchema.parse(updateData);
-      const updatedBlog = await blogService.updateBlog(id, data);
+      const updatedBlog = await blogService.updateBlog(id, data, req.user.username, req.user.is_admin);
       sendSuccess(res, updatedBlog, 200, undefined, 'Blog updated successfully');
     } catch (error) {
       next(error);
@@ -110,7 +120,12 @@ class BlogController {
         throw new ResponseError(400, 'Blog ID is required');
       }
 
-      await blogService.deleteBlog(id);
+      // Verify user is authenticated
+      if (!req.user?.username) {
+        throw new ResponseError(401, 'Unauthorized - Username required');
+      }
+
+      await blogService.deleteBlog(id, req.user.username, req.user.is_admin);
       sendSuccess(res, { message: 'OK' }, 200);
     } catch (error) {
       next(error);

@@ -5,35 +5,81 @@
 http://localhost:3000/api
 ```
 
-## Authentication
-Endpoints yang dilindungi memerlukan header:
+## 🔐 Authentication
+
+### Token Type: JWT (JSON Web Token)
+Endpoints yang dilindungi memerlukan salah satu dari:
+
+**Option 1: X-API-TOKEN Header**
 ```
-X-API-TOKEN: <token>
+X-API-TOKEN: <jwt-token>
 ```
+
+**Option 2: Authorization Bearer Header**
+```
+Authorization: Bearer <jwt-token>
+```
+
+### Token Format
+```
+Header.Payload.Signature
+
+Payload contains:
+{
+  "username": "string",
+  "is_admin": boolean,
+  "iat": number (issued at),
+  "exp": number (expiration - 7 days)
+}
+```
+
+### Token Expiration
+- **Default**: 7 days
+- **Configurable via**: `JWT_EXPIRATION` environment variable
+
+### Security Requirements
+- Tokens expire after 7 days
+- Use HTTPS in production
+- Never share tokens publicly
+- Keep JWT_SECRET secure in environment
 
 ---
 
 ## 📝 USER ENDPOINTS
 
-### 1. Register User (Public)
+### 1. Register User (Public) ✅
 **POST** `/users`
 
-Register user baru dengan username, password, dan nama.
+Register user baru dengan username, password, dan nama. User baru akan memiliki `is_admin = false` secara default.
+
+**Access**: Public (No authentication required)
 
 **Request Body:**
 ```json
 {
-  "username": "string (3-100 chars)",
-  "password": "string (6-20 chars)",
-  "name": "string (1-20 chars)"
+  "username": "string (3-30 chars, alphanumeric + underscore only)",
+  "password": "string (min 8 chars: uppercase, lowercase, number, special char)",
+  "name": "string (1-50 chars)"
 }
 ```
+
+**Password Requirements:**
+- Minimum 8 characters
+- At least 1 uppercase letter (A-Z)
+- At least 1 lowercase letter (a-z)
+- At least 1 number (0-9)
+- At least 1 special character (!@#$%^&*)
+
+**Username Rules:**
+- 3-30 characters
+- Only alphanumeric characters and underscore
+- Must be unique
 
 **Response (201 Created):**
 ```json
 {
   "data": {
-    "username": "user123",
+    "username": "john_doe",
     "name": "John Doe"
   }
 }
@@ -42,7 +88,7 @@ Register user baru dengan username, password, dan nama.
 **Error (400 Bad Request):**
 ```json
 {
-  "errors": "Username must be at least 3 characters"
+  "errors": "Password must contain uppercase, lowercase, number, and special character"
 }
 ```
 
@@ -51,18 +97,20 @@ Register user baru dengan username, password, dan nama.
 curl -X POST http://localhost:3000/api/users \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "user123",
-    "password": "password123",
+    "username": "john_doe",
+    "password": "SecurePass123!",
     "name": "John Doe"
   }'
 ```
 
 ---
 
-### 2. Login User (Public)
+### 2. Login User (Public) ✅
 **POST** `/users/login`
 
-Login dengan username dan password untuk mendapatkan token.
+Login dengan username dan password untuk mendapatkan JWT token.
+
+**Access**: Public (No authentication required)
 
 **Request Body:**
 ```json
@@ -76,9 +124,10 @@ Login dengan username dan password untuk mendapatkan token.
 ```json
 {
   "data": {
-    "username": "user123",
+    "username": "john_doe",
     "name": "John Doe",
-    "token": "uuid-token-string"
+    "is_admin": false,
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
@@ -95,30 +144,36 @@ Login dengan username dan password untuk mendapatkan token.
 curl -X POST http://localhost:3000/api/users/login \
   -H "Content-Type: application/json" \
   -d '{
-    "username": "user123",
-    "password": "password123"
+    "username": "john_doe",
+    "password": "SecurePass123!"
   }'
 ```
 
 ---
 
-### 3. Get Current User (Protected)
+### 3. Get Current User (Protected - Auth Required) ✅
 **GET** `/users/current`
 
 Mendapatkan informasi user yang sedang login.
 
+**Access**: Protected - Authentication required
+
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
+```
+or
+```
+X-API-TOKEN: <jwt-token>
 ```
 
 **Response (200 OK):**
 ```json
 {
   "data": {
-    "username": "user123",
+    "username": "john_doe",
     "name": "John Doe",
-    "token": "uuid-token-string"
+    "is_admin": false
   }
 }
 ```
@@ -133,30 +188,34 @@ X-API-TOKEN: uuid-token-string
 **cURL Example:**
 ```bash
 curl -X GET http://localhost:3000/api/users/current \
-  -H "X-API-TOKEN: uuid-token-string"
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
 ---
 
-### 4. Update User (Protected)
+### 4. Update User Profile (Protected - Auth Required, Ownership enforced) 🔒
 **PATCH** `/users/:username`
 
-Update informasi user berdasarkan username (nama dan/atau password).
+Update informasi user. Non-admin users dapat hanya mengedit profil mereka sendiri. Admin dapat mengedit profil siapapun.
+
+**Access**: Protected - Authentication required
+- **Non-Admin**: Hanya dapat mengedit profil mereka sendiri
+- **Admin**: Dapat mengedit profil user manapun
 
 **Path Parameters:**
-- `username`: string (required, username dari user yang ingin diupdate)
+- `username`: string (required, username user yang ingin diupdate)
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 Content-Type: application/json
 ```
 
 **Request Body:**
 ```json
 {
-  "name": "string (1-20 chars, optional)",
-  "password": "string (6-20 chars, optional)"
+  "name": "string (1-50 chars, optional)",
+  "password": "string (min 8 chars with complexity, optional)"
 }
 ```
 
@@ -164,43 +223,51 @@ Content-Type: application/json
 ```json
 {
   "data": {
-    "username": "user123",
+    "username": "john_doe",
     "name": "Jane Doe",
-    "token": "uuid-token-string"
+    "is_admin": false
   }
 }
 ```
 
-**Error (400 Bad Request):**
+**Error (403 Forbidden - Non-Admin trying to edit others):**
 ```json
 {
-  "errors": "Name must not exceed 20 characters"
+  "errors": "Forbidden - You can only update your own profile"
 }
 ```
 
 **cURL Example:**
 ```bash
-curl -X PATCH http://localhost:3000/api/users/user123 \
-  -H "X-API-TOKEN: uuid-token-string" \
+# Non-admin user updating their own profile
+curl -X PATCH http://localhost:3000/api/users/john_doe \
+  -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Jane Doe",
-    "password": "newpassword123"
+    "name": "Jane Doe"
+  }'
+
+# Admin updating any user
+curl -X PATCH http://localhost:3000/api/users/other_user \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Updated Name"
   }'
 ```
-}
-}
 
 ---
 
-### 5. Logout User (Protected)
+### 5. Logout User (Protected - Auth Required) ✅
 **DELETE** `/users/current`
 
 Logout user dan clear token.
 
+**Access**: Protected - Authentication required
+
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 ```
 
 **Response (200 OK):**
@@ -220,56 +287,96 @@ X-API-TOKEN: uuid-token-string
 **cURL Example:**
 ```bash
 curl -X DELETE http://localhost:3000/api/users/current \
-  -H "X-API-TOKEN: uuid-token-string"
+  -H "Authorization: Bearer <token>"
 ```
 
 ---
 
-### 6. Get All Users (Public)
+### 6. Get All Users (Protected - Admin Only) 🔐
 **GET** `/users`
 
-Mendapatkan daftar semua user yang terdaftar.
+Mendapatkan daftar semua user yang terdaftar. Hanya admin yang dapat mengakses endpoint ini.
+
+**Access**: Protected - Admin only (is_admin = true required)
+
+**Headers:**
+```
+Authorization: Bearer <admin-jwt-token>
+```
 
 **Response (200 OK):**
 ```json
 {
   "data": [
     {
-      "username": "user123",
-      "name": "John Doe"
+      "username": "john_doe",
+      "name": "John Doe",
+      "is_admin": false
     },
     {
-      "username": "user456",
-      "name": "Jane Smith"
+      "username": "admin_user",
+      "name": "Admin User",
+      "is_admin": true
     }
   ]
 }
 ```
 
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
+**Error (403 Forbidden - Non-Admin):**
+```json
+{
+  "errors": "Forbidden - Admin access required"
+}
+```
+
 **cURL Example:**
 ```bash
-curl -X GET http://localhost:3000/api/users
+curl -X GET http://localhost:3000/api/users \
+  -H "Authorization: Bearer <admin-token>"
 ```
 
 ---
 
-### 7. Delete User (Protected)
+### 7. Delete User (Protected - Admin Only) 🔐
 **DELETE** `/users/:username`
 
-Menghapus user berdasarkan username. Memerlukan hak akses admin.
+Menghapus user berdasarkan username. Hanya admin yang dapat menghapus user.
+
+**Access**: Protected - Admin only (is_admin = true required)
+
+**Path Parameters:**
+- `username`: string (required, username of the user to be deleted)
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <admin-jwt-token>
 ```
-
-**URL Parameters:**
-- `username`: string (required, username of the user to be deleted)
 
 **Response (200 OK):**
 ```json
 {
-  "data": "OK"
+  "data": {}
+}
+```
+
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
+**Error (403 Forbidden - Non-Admin):**
+```json
+{
+  "errors": "Forbidden - Admin access required"
 }
 ```
 
@@ -282,22 +389,24 @@ X-API-TOKEN: uuid-token-string
 
 **cURL Example:**
 ```bash
-curl -X DELETE http://localhost:3000/api/users/user_to_delete \
-  -H "X-API-TOKEN: admin-token-string"
+curl -X DELETE http://localhost:3000/api/users/john_doe \
+  -H "Authorization: Bearer <admin-token>"
 ```
 
 ---
 
 ## 📸 POSTING ENDPOINTS
 
-### 1. Create Posting (Protected)
+### 1. Create Posting (Protected - Auth Required) ✅
 **POST** `/posting`
 
-Membuat posting baru dengan judul, deskripsi, tanggal, dan file gambar (opsional).
+Membuat posting baru dengan judul, deskripsi, tanggal, dan file gambar (opsional). Posting akan disimpan dengan username pembuat.
+
+**Access**: Protected - Authentication required
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 Content-Type: multipart/form-data
 ```
 
@@ -315,10 +424,10 @@ Content-Type: multipart/form-data
     "title": "Postingan Pertama",
     "description": "Ini adalah deskripsi postingan",
     "date": "2025-11-13",
+    "username": "john_doe",
     "pictures": [
-      "https://cloud-url.com/randomNameImage_1.jpg",
-      "https://cloud-url.com/randomNameImage_2.jpg",
-      "https://cloud-url.com/randomNameImage_3.jpg"
+      "https://s3.amazonaws.com/bucket/randomNameImage_1.jpg",
+      "https://s3.amazonaws.com/bucket/randomNameImage_2.jpg"
     ],
     "createdAt": "2025-11-13T07:00:11.000Z",
     "updatedAt": "2025-11-13T07:00:11.000Z"
@@ -333,10 +442,17 @@ Content-Type: multipart/form-data
 }
 ```
 
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
 **cURL Example:**
 ```bash
 curl -X POST http://localhost:3000/api/posting \
-  -H "X-API-TOKEN: uuid-token-string" \
+  -H "Authorization: Bearer <token>" \
   -F "title=Postingan Pertama" \
   -F "description=Ini adalah deskripsi postingan" \
   -F "date=2025-11-13" \
@@ -346,10 +462,12 @@ curl -X POST http://localhost:3000/api/posting \
 
 ---
 
-### 2. Get All Postings (Public)
+### 2. Get All Postings (Public) ✅
 **GET** `/posting`
 
 Mendapatkan daftar semua postings dengan pagination dan search.
+
+**Access**: Public (No authentication required)
 
 **Query Parameters:**
 - `title`: string (optional, search by title)
@@ -365,7 +483,8 @@ Mendapatkan daftar semua postings dengan pagination dan search.
       "title": "Postingan Pertama",
       "description": "Ini adalah deskripsi postingan",
       "date": "2025-11-13",
-      "pictures": ["https://cloud-url.com/randomNameImage_1.jpg", "https://cloud-url.com/randomNameImage_2.jpg", "https://cloud-url.com/randomNameImage_3.jpg"],
+      "username": "john_doe",
+      "pictures": ["https://s3.amazonaws.com/bucket/randomNameImage_1.jpg"],
       "createdAt": "2025-11-13T07:00:11.000Z",
       "updatedAt": "2025-11-13T07:00:11.000Z"
     }
@@ -389,10 +508,12 @@ curl -X GET "http://localhost:3000/api/posting?page=2&size=5&title=pertama"
 
 ---
 
-### 3. Get Posting by ID (Public)
+### 3. Get Posting by ID (Public) ✅
 **GET** `/posting/:id`
 
 Mendapatkan detail posting berdasarkan ID.
+
+**Access**: Public (No authentication required)
 
 **URL Parameters:**
 - `id`: string (required, posting ID)
@@ -405,7 +526,8 @@ Mendapatkan detail posting berdasarkan ID.
     "title": "Postingan Pertama",
     "description": "Ini adalah deskripsi postingan",
     "date": "2025-11-13",
-    "pictures": ["https://cloud-url.com/randomNameImage_1.jpg", "https://cloud-url.com/randomNameImage_2.jpg", "https://cloud-url.com/randomNameImage_3.jpg"],
+    "username": "john_doe",
+    "pictures": ["https://s3.amazonaws.com/bucket/randomNameImage_1.jpg"],
     "createdAt": "2025-11-13T07:00:11.000Z",
     "updatedAt": "2025-11-13T07:00:11.000Z"
   }
@@ -426,14 +548,18 @@ curl -X GET http://localhost:3000/api/posting/uuid-string
 
 ---
 
-### 4. Update Posting (Protected)
+### 4. Update Posting (Protected - Auth Required, Ownership enforced) 🔒
 **PATCH** `/posting/:id`
 
-Update posting berdasarkan ID. Bisa update judul, deskripsi, tanggal, atau gambar.
+Update posting berdasarkan ID. Non-admin users hanya dapat mengedit posting mereka sendiri. Admin dapat mengedit posting siapapun.
+
+**Access**: Protected - Authentication required
+- **Non-Admin**: Hanya dapat mengedit posting mereka sendiri (ownership required)
+- **Admin**: Dapat mengedit posting siapapun
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 Content-Type: multipart/form-data
 ```
 
@@ -454,31 +580,56 @@ Content-Type: multipart/form-data
     "title": "Postingan Updated",
     "description": "Deskripsi yang sudah diupdate",
     "date": "2025-11-14",
-    "pictures": ["https://cloud-url.com/randomNameImage_1.jpg", "https://cloud-url.com/randomNameImage_2.jpg", "https://cloud-url.com/randomNameImage_3.jpg"],
+    "username": "john_doe",
+    "pictures": ["https://s3.amazonaws.com/bucket/randomNameImage_1.jpg"],
     "createdAt": "2025-11-13T07:00:11.000Z",
     "updatedAt": "2025-11-13T07:10:00.000Z"
   }
 }
 ```
 
+**Error (403 Forbidden - Non-Admin trying to edit others' posting):**
+```json
+{
+  "errors": "Forbidden - You can only update your own postings"
+}
+```
+
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
 **cURL Example:**
 ```bash
+# Non-admin updating their own posting
 curl -X PATCH http://localhost:3000/api/posting/uuid-string \
-  -H "X-API-TOKEN: uuid-token-string" \
+  -H "Authorization: Bearer <token>" \
   -F "title=Postingan Updated" \
   -F "pictures=@/path/to/new-image.jpg"
+
+# Admin updating any posting
+curl -X PATCH http://localhost:3000/api/posting/uuid-string \
+  -H "Authorization: Bearer <admin-token>" \
+  -F "title=Admin Updated Title"
 ```
 
 ---
 
-### 5. Delete Posting (Protected)
+### 5. Delete Posting (Protected - Auth Required, Ownership enforced) 🔒
 **DELETE** `/posting/:id`
 
-Menghapus posting berdasarkan ID.
+Menghapus posting berdasarkan ID. Non-admin users hanya dapat menghapus posting mereka sendiri. Admin dapat menghapus posting siapapun.
+
+**Access**: Protected - Authentication required
+- **Non-Admin**: Hanya dapat menghapus posting mereka sendiri (ownership required)
+- **Admin**: Dapat menghapus posting siapapun
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 ```
 
 **URL Parameters:**
@@ -491,6 +642,13 @@ X-API-TOKEN: uuid-token-string
 }
 ```
 
+**Error (403 Forbidden - Non-Admin trying to delete others' posting):**
+```json
+{
+  "errors": "Forbidden - You can only delete your own postings"
+}
+```
+
 **Error (404 Not Found):**
 ```json
 {
@@ -498,24 +656,38 @@ X-API-TOKEN: uuid-token-string
 }
 ```
 
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
 **cURL Example:**
 ```bash
+# Non-admin deleting their own posting
 curl -X DELETE http://localhost:3000/api/posting/uuid-string \
-  -H "X-API-TOKEN: uuid-token-string"
+  -H "Authorization: Bearer <token>"
+
+# Admin deleting any posting
+curl -X DELETE http://localhost:3000/api/posting/uuid-string \
+  -H "Authorization: Bearer <admin-token>"
 ```
 
 ---
 
 ## 📚 BLOG ENDPOINTS
 
-### 1. Create Blog (Protected)
+### 1. Create Blog (Protected - Auth Required) ✅
 **POST** `/blogs`
 
-Membuat blog post baru dengan judul, deskripsi, tanggal, dan file gambar (opsional).
+Membuat blog post baru dengan judul, deskripsi, tanggal, dan file gambar (opsional). Blog akan disimpan dengan username pembuat.
+
+**Access**: Protected - Authentication required
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 Content-Type: multipart/form-data
 ```
 
@@ -533,7 +705,8 @@ Content-Type: multipart/form-data
     "title": "Blog Post Pertama",
     "description": "Ini adalah deskripsi blog post",
     "date": "2025-11-13",
-    "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
+    "username": "john_doe",
+    "picture": "https://s3.amazonaws.com/bucket/blog-randomNameImage.jpg",
     "create_at": "2025-11-13T07:00:11.000Z",
     "update_at": "2025-11-13T07:00:11.000Z"
   }
@@ -547,10 +720,17 @@ Content-Type: multipart/form-data
 }
 ```
 
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
 **cURL Example:**
 ```bash
 curl -X POST http://localhost:3000/api/blogs \
-  -H "X-API-TOKEN: uuid-token-string" \
+  -H "Authorization: Bearer <token>" \
   -F "title=Blog Post Pertama" \
   -F "description=Ini adalah deskripsi blog post" \
   -F "date=2025-11-13" \
@@ -559,10 +739,12 @@ curl -X POST http://localhost:3000/api/blogs \
 
 ---
 
-### 2. Get All Blogs (Public)
+### 2. Get All Blogs (Public) ✅
 **GET** `/blogs`
 
 Mendapatkan daftar semua blog posts dengan pagination dan search.
+
+**Access**: Public (No authentication required)
 
 **Query Parameters:**
 - `title`: string (optional, search by title)
@@ -578,7 +760,8 @@ Mendapatkan daftar semua blog posts dengan pagination dan search.
       "title": "Blog Post Pertama",
       "description": "Ini adalah deskripsi blog post",
       "date": "2025-11-13",
-      "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
+      "username": "john_doe",
+      "picture": "https://s3.amazonaws.com/bucket/blog-randomNameImage.jpg",
       "create_at": "2025-11-13T07:00:11.000Z",
       "update_at": "2025-11-13T07:00:11.000Z"
     }
@@ -602,10 +785,12 @@ curl -X GET "http://localhost:3000/api/blogs?page=1&size=5&title=pertama"
 
 ---
 
-### 3. Get Blog by ID (Public)
+### 3. Get Blog by ID (Public) ✅
 **GET** `/blogs/:id`
 
 Mendapatkan detail blog post berdasarkan ID.
+
+**Access**: Public (No authentication required)
 
 **URL Parameters:**
 - `id`: string (required, blog ID)
@@ -618,7 +803,8 @@ Mendapatkan detail blog post berdasarkan ID.
     "title": "Blog Post Pertama",
     "description": "Ini adalah deskripsi blog post",
     "date": "2025-11-13",
-    "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
+    "username": "john_doe",
+    "picture": "https://s3.amazonaws.com/bucket/blog-randomNameImage.jpg",
     "create_at": "2025-11-13T07:00:11.000Z",
     "update_at": "2025-11-13T07:00:11.000Z"
   }
@@ -639,14 +825,18 @@ curl -X GET http://localhost:3000/api/blogs/uuid-string
 
 ---
 
-### 4. Update Blog (Protected)
+### 4. Update Blog (Protected - Auth Required, Ownership enforced) 🔒
 **PATCH** `/blogs/:id`
 
-Update blog post berdasarkan ID. Bisa update judul, deskripsi, tanggal, atau gambar.
+Update blog post berdasarkan ID. Non-admin users hanya dapat mengedit blog mereka sendiri. Admin dapat mengedit blog siapapun.
+
+**Access**: Protected - Authentication required
+- **Non-Admin**: Hanya dapat mengedit blog mereka sendiri (ownership required)
+- **Admin**: Dapat mengedit blog siapapun
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 Content-Type: multipart/form-data
 ```
 
@@ -667,31 +857,56 @@ Content-Type: multipart/form-data
     "title": "Blog Post Updated",
     "description": "Deskripsi yang sudah diupdate",
     "date": "2025-11-14",
-    "picture": "https://cloud-url.com/blog-randomNameImage.jpg",
+    "username": "john_doe",
+    "picture": "https://s3.amazonaws.com/bucket/blog-randomNameImage.jpg",
     "create_at": "2025-11-13T07:00:11.000Z",
     "update_at": "2025-11-13T07:10:00.000Z"
   }
 }
 ```
 
+**Error (403 Forbidden - Non-Admin trying to edit others' blog):**
+```json
+{
+  "errors": "Forbidden - You can only update your own blogs"
+}
+```
+
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
 **cURL Example:**
 ```bash
+# Non-admin updating their own blog
 curl -X PATCH http://localhost:3000/api/blogs/uuid-string \
-  -H "X-API-TOKEN: uuid-token-string" \
+  -H "Authorization: Bearer <token>" \
   -F "title=Blog Post Updated" \
   -F "picture=@/path/to/new-blog-image.jpg"
+
+# Admin updating any blog
+curl -X PATCH http://localhost:3000/api/blogs/uuid-string \
+  -H "Authorization: Bearer <admin-token>" \
+  -F "title=Admin Updated Blog Title"
 ```
 
 ---
 
-### 5. Delete Blog (Protected)
+### 5. Delete Blog (Protected - Auth Required, Ownership enforced) 🔒
 **DELETE** `/blogs/:id`
 
-Menghapus blog post berdasarkan ID.
+Menghapus blog post berdasarkan ID. Non-admin users hanya dapat menghapus blog mereka sendiri. Admin dapat menghapus blog siapapun.
+
+**Access**: Protected - Authentication required
+- **Non-Admin**: Hanya dapat menghapus blog mereka sendiri (ownership required)
+- **Admin**: Dapat menghapus blog siapapun
 
 **Headers:**
 ```
-X-API-TOKEN: uuid-token-string
+Authorization: Bearer <jwt-token>
 ```
 
 **URL Parameters:**
@@ -704,6 +919,13 @@ X-API-TOKEN: uuid-token-string
 }
 ```
 
+**Error (403 Forbidden - Non-Admin trying to delete others' blog):**
+```json
+{
+  "errors": "Forbidden - You can only delete your own blogs"
+}
+```
+
 **Error (404 Not Found):**
 ```json
 {
@@ -711,10 +933,22 @@ X-API-TOKEN: uuid-token-string
 }
 ```
 
+**Error (401 Unauthorized):**
+```json
+{
+  "errors": "Unauthorized - Token required"
+}
+```
+
 **cURL Example:**
 ```bash
+# Non-admin deleting their own blog
 curl -X DELETE http://localhost:3000/api/blogs/uuid-string \
-  -H "X-API-TOKEN: uuid-token-string"
+  -H "Authorization: Bearer <token>"
+
+# Admin deleting any blog
+curl -X DELETE http://localhost:3000/api/blogs/uuid-string \
+  -H "Authorization: Bearer <admin-token>"
 ```
 
 ---
@@ -728,12 +962,50 @@ curl -X DELETE http://localhost:3000/api/blogs/uuid-string \
 }
 ```
 
+**Common causes:**
+- Missing required fields
+- Invalid format (dates, email, etc.)
+- File upload errors
+- Invalid query parameters
+
+---
+
 ### 401 Unauthorized
 ```json
 {
   "errors": "Unauthorized - Token required"
 }
 ```
+
+**Common causes:**
+- Missing authentication token
+- Token expired
+- Invalid token format
+- Token signature mismatch
+
+---
+
+### 403 Forbidden
+```json
+{
+  "errors": "Forbidden - Admin access required"
+}
+```
+
+or
+
+```json
+{
+  "errors": "Forbidden - You can only update your own profile"
+}
+```
+
+**Common causes:**
+- Non-admin trying to access admin-only endpoint
+- Non-admin trying to edit/delete other users' content
+- Insufficient permissions for operation
+
+---
 
 ### 404 Not Found
 ```json
@@ -742,6 +1014,13 @@ curl -X DELETE http://localhost:3000/api/blogs/uuid-string \
 }
 ```
 
+**Common causes:**
+- User/Posting/Blog ID doesn't exist
+- Deleted resource
+- Invalid ID format
+
+---
+
 ### 500 Internal Server Error
 ```json
 {
@@ -749,81 +1028,348 @@ curl -X DELETE http://localhost:3000/api/blogs/uuid-string \
 }
 ```
 
+**Common causes:**
+- Database connection error
+- File upload to S3 failed
+- Server-side validation error
+- Unexpected error condition
+
 ---
 
 ## 📋 Validation Rules
 
 ### User Validation
-- **Username**: Min 3 chars, Max 100 chars, unique
-- **Password**: Min 6 chars, Max 20 chars
-- **Name**: Min 1 char, Max 20 chars
+- **Username**:
+  - Length: 3-30 characters
+  - Format: Alphanumeric + underscore only
+  - Must be unique in system
+  - Examples: `john_doe`, `user123`, `admin_user`
+
+- **Password**:
+  - Length: Minimum 8 characters, Maximum 128 characters
+  - Uppercase: At least 1 letter (A-Z)
+  - Lowercase: At least 1 letter (a-z)
+  - Number: At least 1 digit (0-9)
+  - Special Character: At least 1 special char (!@#$%^&*)
+  - Examples: `SecurePass123!`, `MyP@ssw0rd`, `Test#Pass2025`
+
+- **Name**:
+  - Length: 1-50 characters
+  - Trimmed (no leading/trailing spaces)
+  - UTF-8 characters supported
 
 ### Posting Validation
-- **Title**: Max 255 chars
-- **Description**: Required
-- **Date**: Format YYYY-MM-DD
-- **Pictures**: Max 3 files, each max 10MB
+- **Title**:
+  - Max 255 characters
+  - Required field
+
+- **Description**:
+  - Required field
+  - No maximum length
+
+- **Date**:
+  - Format: YYYY-MM-DD
+  - Required field
+
+- **Pictures**:
+  - Maximum 3 files per posting
+  - File size: Max 10MB per file
+  - Supported formats: jpg, jpeg, png, gif, webp
 
 ### Blog Validation
-- **Title**: Max 255 chars
-- **Description**: Required
-- **Date**: Format YYYY-MM-DD
-- **Picture**: Max 1 file, max 10MB
+- **Title**:
+  - Max 255 characters
+  - Required field
+
+- **Description**:
+  - Required field
+  - No maximum length
+
+- **Date**:
+  - Format: YYYY-MM-DD
+  - Required field
+
+- **Picture**:
+  - Maximum 1 file per blog
+  - File size: Max 10MB
+  - Supported formats: jpg, jpeg, png, gif, webp
 
 ---
 
 ## 🔐 Authentication Flow
 
-1. **Register** → POST `/users` → Create account
-2. **Login** → POST `/users/login` → Get token
-3. **Use Token** → Add `X-API-TOKEN` header to protected requests
-4. **Access Protected Resources** → GET/POST/PATCH/DELETE with token
-5. **Logout** → DELETE `/users/current` → Clear token
+### 1. Register Account
+```
+POST /api/users
+  └─ Public endpoint
+  └─ Creates new account
+  └─ New user has is_admin = false by default
+```
+
+### 2. Login
+```
+POST /api/users/login
+  └─ Public endpoint
+  └─ Returns JWT token with 7-day expiration
+  └─ Token contains: username, is_admin, iat, exp
+```
+
+### 3. Store Token
+```
+Save token in:
+  ├─ LocalStorage (client-side)
+  ├─ SessionStorage (client-side)
+  └─ HTTP-only Cookie (recommended for security)
+```
+
+### 4. Use Token in Requests
+```
+Option 1 - Authorization Header (Recommended):
+  Authorization: Bearer <jwt-token>
+
+Option 2 - Custom Header:
+  X-API-TOKEN: <jwt-token>
+```
+
+### 5. Access Protected Resources
+```
+GET /api/users/current
+  ├─ Returns current user profile
+  └─ Requires valid JWT
+
+POST /api/posting
+  ├─ Create posting with username
+  └─ Requires valid JWT
+
+PATCH /api/posting/:id
+  ├─ Edit own posting (non-admin) or any posting (admin)
+  └─ Requires valid JWT + ownership check
+```
+
+### 6. Handle Token Expiration
+```
+When token expires (401 Unauthorized):
+  ├─ Catch 401 error
+  ├─ Redirect to login page
+  └─ Clear stored token
+```
+
+### 7. Logout
+```
+DELETE /api/users/current
+  ├─ Server-side logout (optional)
+  └─ Client removes token from storage
+```
 
 ---
 
-## 🚀 Testing dengan Postman
+## 🚀 Quick Start Examples
 
-1. Import collection atau setup manual dengan:
-   - **BASE_URL**: `http://localhost:3000/api`
-   - **TOKEN**: Simpan dari login response
-   - **User-Agent**: Postman
+### Register and Login
+```bash
+# 1. Register new user
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john_doe",
+    "password": "SecurePass123!",
+    "name": "John Doe"
+  }'
 
-2. Atau gunakan cURL commands di atas
+# 2. Login
+curl -X POST http://localhost:3000/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john_doe",
+    "password": "SecurePass123!"
+  }'
+
+# 3. Store returned token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Create and Edit Posting
+```bash
+# 1. Create posting (with token)
+curl -X POST http://localhost:3000/api/posting \
+  -H "Authorization: Bearer <token>" \
+  -F "title=My First Post" \
+  -F "description=This is my first post" \
+  -F "date=2025-11-13" \
+  -F "pictures=@image.jpg"
+
+# 2. Get posting ID from response
+# 3. Edit your posting
+curl -X PATCH http://localhost:3000/api/posting/<posting-id> \
+  -H "Authorization: Bearer <token>" \
+  -F "title=My Updated Post"
+
+# 4. Try to edit another user's posting (will fail with 403)
+curl -X PATCH http://localhost:3000/api/posting/<other-posting-id> \
+  -H "Authorization: Bearer <non-admin-token>" \
+  -F "title=Hacked!"
+  # Result: 403 Forbidden - You can only update your own postings
+```
+
+### Admin Operations
+```bash
+# 1. Get all users (admin only)
+curl -X GET http://localhost:3000/api/users \
+  -H "Authorization: Bearer <admin-token>"
+
+# 2. Delete user (admin only)
+curl -X DELETE http://localhost:3000/api/users/john_doe \
+  -H "Authorization: Bearer <admin-token>"
+
+# 3. Edit any user's profile (admin)
+curl -X PATCH http://localhost:3000/api/users/john_doe \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Admin Updated Name"
+  }'
+
+# 4. Delete any posting (admin)
+curl -X DELETE http://localhost:3000/api/posting/<posting-id> \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+---
+
+## 🛡️ Security Best Practices
+
+### For Frontend Developers
+1. **Never expose token in URL** - Always use headers
+2. **Use HTTPS only** - Never send tokens over HTTP
+3. **Store tokens securely**:
+   - Prefer HTTP-only cookies
+   - Avoid LocalStorage for sensitive apps
+4. **Clear token on logout** - Remove from storage immediately
+5. **Handle 401 responses** - Auto-redirect to login
+6. **Validate server SSL certificates** in production
+
+### For API Usage
+1. **Token Expiration**: Tokens expire after 7 days
+2. **Ownership Enforcement**: 
+   - Non-admin cannot edit/delete other users' content
+   - Admin can manage all content
+3. **Admin Separation**:
+   - User management (create/read/delete) is admin-only
+   - Public users cannot register others
+4. **Rate Limiting**:
+   - General: 100 requests per 15 minutes
+   - Login: 5 attempts per 15 minutes
+5. **Password Policy**:
+   - Minimum 8 characters with complexity requirements
+   - Stored as bcrypt hash (never plaintext)
 
 ---
 
 ## 📦 Response Format
 
-Semua response mengikuti format:
-
-**Success:**
+### Success Response with Data
 ```json
 {
-  "data": { ... },
-  "paging": { ... }  // Optional
+  "data": {
+    "username": "john_doe",
+    "name": "John Doe",
+    "is_admin": false
+  }
 }
 ```
 
-**Error:**
+### Success Response with Pagination
 ```json
 {
-  "errors": "Error message"
+  "data": [
+    { "id": "uuid", "title": "Post 1" },
+    { "id": "uuid", "title": "Post 2" }
+  ],
+  "paging": {
+    "current_page": 1,
+    "total_page": 5,
+    "size": 10
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "errors": "Error message describing what went wrong"
 }
 ```
 
 ---
 
-## ✅ Status Codes
+## ✅ HTTP Status Codes
 
-- **200 OK** - Request berhasil
-- **201 Created** - Resource berhasil dibuat
-- **400 Bad Request** - Validation error
-- **401 Unauthorized** - Token invalid/missing
-- **404 Not Found** - Resource tidak ditemukan
-- **500 Internal Server Error** - Server error
+| Code | Status | Meaning | Example |
+|------|--------|---------|---------|
+| 200 | OK | Request successful | GET successful, update successful |
+| 201 | Created | Resource created | User registered, posting created |
+| 400 | Bad Request | Invalid input | Missing required fields |
+| 401 | Unauthorized | Authentication required/failed | Missing token, expired token |
+| 403 | Forbidden | Insufficient permissions | Non-admin access admin endpoint |
+| 404 | Not Found | Resource doesn't exist | User/posting/blog not found |
+| 500 | Internal Server Error | Server error | Database error, S3 upload failed |
 
 ---
 
-**Last Updated**: November 13, 2025
-**API Version**: 1.0.0
+## 🔄 Rate Limiting
+
+### General Rate Limit
+- **Limit**: 100 requests
+- **Window**: 15 minutes
+- **Error**: 429 Too Many Requests
+
+### Login Rate Limit
+- **Limit**: 5 attempts
+- **Window**: 15 minutes
+- **Error**: 429 Too Many Requests
+- **Note**: Only counts failed login attempts
+
+---
+
+## 📧 Environment Variables
+
+Required for production:
+
+```bash
+# Database
+DATABASE_URL=mysql://user:password@host:port/database
+
+# JWT
+JWT_SECRET=your-secret-key-here-minimum-32-chars
+JWT_EXPIRATION=7d
+
+# AWS S3
+AWS_REGION=ap-southeast-1
+AWS_ACCESS_KEY_ID=your-access-key
+AWS_SECRET_ACCESS_KEY=your-secret-key
+AWS_BUCKET_NAME=your-bucket-name
+
+# CORS
+ALLOWED_ORIGINS=http://localhost:3000,https://yourdomain.com
+
+# Server
+PORT=3000
+NODE_ENV=production
+```
+
+---
+
+## 📞 Support & Contact
+
+For API issues or questions:
+- Check documentation in `/doc` folder
+- Review error message format
+- Verify authentication token is valid
+- Check rate limiting status
+- Ensure JSON format is correct
+
+---
+
+**Last Updated**: December 2025
+**API Version**: 1.1.0
+**Authentication Type**: JWT (JSON Web Token)
+**Token Expiration**: 7 days

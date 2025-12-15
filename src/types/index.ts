@@ -16,6 +16,7 @@ export interface ApiResponse<T> {
 export interface UserResponse {
   username: string;
   name: string;
+  is_admin?: boolean;
   token?: string;
 }
 

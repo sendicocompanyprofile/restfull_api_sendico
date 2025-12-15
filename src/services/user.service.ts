@@ -85,11 +85,12 @@ export class UserService {
         throw new ResponseError(401, 'Username or password is incorrect');
       }
 
-      // Generate JWT token (stateless, no need to store in database)
-      const token = generateToken(user.username);
+      // Generate JWT token with is_admin flag
+      const token = generateToken(user.username, user.is_admin);
 
       logger.info('User logged in successfully', {
         username: user.username,
+        is_admin: user.is_admin,
       });
 
       return {
@@ -129,6 +130,7 @@ export class UserService {
       return {
         username: user.username,
         name: user.name,
+        is_admin: user.is_admin,
         ...(user.token && { token: user.token }),
       };
     } catch (error) {

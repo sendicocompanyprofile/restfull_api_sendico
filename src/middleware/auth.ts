@@ -5,6 +5,7 @@ import { ResponseError } from '../utils/errors.js';
 export interface AuthenticatedRequest extends Request {
   user?: {
     username: string;
+    is_admin: boolean;
   };
 }
 
@@ -36,7 +37,10 @@ export async function authMiddleware(
       throw new ResponseError(401, 'Unauthorized - Invalid or expired token');
     }
 
-    req.user = { username: payload.username };
+    req.user = { 
+      username: payload.username,
+      is_admin: payload.is_admin || false 
+    };
     next();
   } catch (error) {
     if (error instanceof ResponseError) {

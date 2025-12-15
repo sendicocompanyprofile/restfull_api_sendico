@@ -10,6 +10,11 @@ import { logger } from '../utils/logger.js';
 export class PostingController {
   async createPosting(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
+      // Verify user is authenticated
+      if (!req.user?.username) {
+        throw new ResponseError(401, 'Unauthorized - Username required');
+      }
+
       // Check if files are uploaded
       const files = req.files as Express.Multer.File[] | undefined;
       let pictureUrls: string[] = [];
@@ -43,8 +48,8 @@ export class PostingController {
         pictures: pictureUrls,
       });
 
-      // Create posting in database
-      const result = await postingService.createPosting(validatedData);
+      // Create posting in database with username
+      const result = await postingService.createPosting(validatedData, req.user.username);
       sendSuccess(res, result, 201);
     } catch (error) {
       // Enhanced error handling with more specific messages
@@ -92,6 +97,11 @@ export class PostingController {
         throw new ResponseError(400, 'Posting ID is required');
       }
 
+      // Verify user is authenticated
+      if (!req.user?.username) {
+        throw new ResponseError(401, 'Unauthorized - Username required');
+      }
+
       // Validate storage configuration first
       cloudStorageService.validateStorageConfig();
 
@@ -132,7 +142,7 @@ export class PostingController {
       }
 
       const validatedData = UpdatePostingSchema.parse(updateData);
-      const result = await postingService.updatePosting(id, validatedData);
+      const result = await postingService.updatePosting(id, validatedData, req.user.username, req.user.is_admin);
       const message = pictureUrls ? 'Posting updated successfully. Pictures have been updated.' : 'Posting updated successfully.';
       sendSuccess(res, result, 200, undefined, message);
     } catch (error) {
@@ -148,7 +158,12 @@ export class PostingController {
         throw new ResponseError(400, 'Posting ID is required');
       }
 
-      await postingService.deletePosting(id);
+      // Verify user is authenticated
+      if (!req.user?.username) {
+        throw new ResponseError(401, 'Unauthorized - Username required');
+      }
+
+      await postingService.deletePosting(id, req.user.username, req.user.is_admin);
       sendSuccess(res, { data: 'OK' });
     } catch (error) {
       next(error);

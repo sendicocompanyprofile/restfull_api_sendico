@@ -42,13 +42,23 @@ export class UserController {
 
   async updateUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const username = req.params.username;
-      if (!username) {
+      const targetUsername = req.params.username;
+      if (!targetUsername) {
         throw new ResponseError(400, 'Username is required');
       }
 
+      // Verify user is authenticated
+      if (!req.user?.username) {
+        throw new ResponseError(401, 'Unauthorized');
+      }
+
+      // Check ownership: only admin or the user themselves can update
+      if (!req.user.is_admin && req.user.username !== targetUsername) {
+        throw new ResponseError(403, 'Forbidden - You can only update your own profile');
+      }
+
       const validatedData = UpdateUserSchema.parse(req.body);
-      const result = await userService.updateUser(username, validatedData);
+      const result = await userService.updateUser(targetUsername, validatedData);
       sendSuccess(res, result);
     } catch (error) {
       next(error);

@@ -9,13 +9,14 @@ export class PostingService {
   private get prisma() {
     return getPrismaClient();
   }
-  async createPosting(request: CreatePostingRequest): Promise<PostingResponse> {
+  async createPosting(request: CreatePostingRequest, username: string): Promise<PostingResponse> {
     try {
       const posting = await this.prisma.posting.create({
         data: {
           title: request.title,
           description: request.description,
           date: new Date(request.date),
+          username,
           pictures: {
             create: (request.pictures || []).map(url => ({ url })),
           },
@@ -28,6 +29,7 @@ export class PostingService {
       return this.formatPosting(posting);
     } catch (error) {
       logger.error('Create posting failed', {
+        username,
         error: error instanceof Error ? error.message : String(error),
       });
       throw new ResponseError(500, 'Failed to create posting');
@@ -96,7 +98,12 @@ export class PostingService {
     };
   }
 
-  async updatePosting(id: string, request: UpdatePostingRequest): Promise<PostingResponse> {
+  async updatePosting(
+    id: string,
+    request: UpdatePostingRequest,
+    username: string,
+    is_admin: boolean
+  ): Promise<PostingResponse> {
     const posting = await this.prisma.posting.findUnique({
       where: { id },
       include: {
@@ -107,6 +114,16 @@ export class PostingService {
     if (!posting) {
       logger.warn('Posting not found for update', { postingId: id });
       throw new ResponseError(404, 'Posting not found');
+    }
+
+    // Check ownership: only admin or owner can update
+    if (!is_admin && posting.username !== username) {
+      logger.warn('Unauthorized posting update attempt', {
+        postingId: id,
+        attemptedBy: username,
+        owner: posting.username,
+      });
+      throw new ResponseError(403, 'Forbidden - You can only update your own postings');
     }
 
     const updateData: any = {};
@@ -155,11 +172,15 @@ export class PostingService {
       },
     });
 
-    logger.info('Posting updated successfully', { postingId: id });
+    logger.info('Posting updated successfully', { postingId: id, updatedBy: username });
     return this.formatPosting(updatedPosting);
   }
 
-  async deletePosting(id: string): Promise<void> {
+  async deletePosting(
+    id: string,
+    username: string,
+    is_admin: boolean
+  ): Promise<void> {
     const posting = await this.prisma.posting.findUnique({
       where: { id },
       include: {
@@ -170,6 +191,16 @@ export class PostingService {
     if (!posting) {
       logger.warn('Posting not found for delete', { postingId: id });
       throw new ResponseError(404, 'Posting not found');
+    }
+
+    // Check ownership: only admin or owner can delete
+    if (!is_admin && posting.username !== username) {
+      logger.warn('Unauthorized posting delete attempt', {
+        postingId: id,
+        attemptedBy: username,
+        owner: posting.username,
+      });
+      throw new ResponseError(403, 'Forbidden - You can only delete your own postings');
     }
 
     // Delete associated pictures from storage
@@ -189,7 +220,7 @@ export class PostingService {
       where: { id },
     });
 
-    logger.info('Posting deleted successfully', { postingId: id });
+    logger.info('Posting deleted successfully', { postingId: id, deletedBy: username });
   }
 
   private formatPosting(posting: any): PostingResponse {

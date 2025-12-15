@@ -5,6 +5,7 @@ const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '7d'; // 7 days default
 
 export interface TokenPayload {
   username: string;
+  is_admin: boolean;
   iat?: number;
   exp?: number;
 }
@@ -12,9 +13,10 @@ export interface TokenPayload {
 /**
  * Generate JWT token with expiration
  */
-export function generateToken(username: string): string {
+export function generateToken(username: string, is_admin: boolean = false): string {
   const payload: TokenPayload = {
     username,
+    is_admin,
   };
 
   const token = jwt.sign(payload, JWT_SECRET as string, {

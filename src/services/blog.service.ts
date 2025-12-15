@@ -43,7 +43,7 @@ class BlogService {
   }
 
   // Create new blog
-  async createBlog(data: CreateBlogType): Promise<BlogResponse> {
+  async createBlog(data: CreateBlogType, username: string): Promise<BlogResponse> {
     const dateObj = new Date(data.date);
     
     const blog = await this.prisma.blog.create({
@@ -53,6 +53,7 @@ class BlogService {
         description: data.description,
         date: dateObj,
         picture: data.picture || '', // Default to empty string if not provided
+        username,
       },
     });
 
@@ -111,13 +112,28 @@ class BlogService {
   }
 
   // Update blog
-  async updateBlog(id: string, data: UpdateBlogType): Promise<BlogResponse> {
+  async updateBlog(
+    id: string,
+    data: UpdateBlogType,
+    username: string,
+    is_admin: boolean
+  ): Promise<BlogResponse> {
     // Check if blog exists
     const existingBlog = await this.prisma.blog.findUnique({ where: { id } });
 
     if (!existingBlog) {
       logger.warn('Blog not found for update', { blogId: id });
       throw new ResponseError(404, 'Blog not found');
+    }
+
+    // Check ownership: only admin or owner can update
+    if (!is_admin && existingBlog.username !== username) {
+      logger.warn('Unauthorized blog update attempt', {
+        blogId: id,
+        attemptedBy: username,
+        owner: existingBlog.username,
+      });
+      throw new ResponseError(403, 'Forbidden - You can only update your own blogs');
     }
 
     const updateData: any = {};
@@ -147,17 +163,31 @@ class BlogService {
       data: updateData,
     });
 
-    logger.info('Blog updated successfully', { blogId: id });
+    logger.info('Blog updated successfully', { blogId: id, updatedBy: username });
     return this.formatBlog(updatedBlog);
   }
 
   // Delete blog
-  async deleteBlog(id: string): Promise<void> {
+  async deleteBlog(
+    id: string,
+    username: string,
+    is_admin: boolean
+  ): Promise<void> {
     const blog = await this.prisma.blog.findUnique({ where: { id } });
 
     if (!blog) {
       logger.warn('Blog not found for delete', { blogId: id });
       throw new ResponseError(404, 'Blog not found');
+    }
+
+    // Check ownership: only admin or owner can delete
+    if (!is_admin && blog.username !== username) {
+      logger.warn('Unauthorized blog delete attempt', {
+        blogId: id,
+        attemptedBy: username,
+        owner: blog.username,
+      });
+      throw new ResponseError(403, 'Forbidden - You can only delete your own blogs');
     }
 
     // Delete associated picture from storage
@@ -174,7 +204,7 @@ class BlogService {
     }
 
     await this.prisma.blog.delete({ where: { id } });
-    logger.info('Blog deleted successfully', { blogId: id });
+    logger.info('Blog deleted successfully', { blogId: id, deletedBy: username });
   }
 
   // Get all blogs (for public listing)
