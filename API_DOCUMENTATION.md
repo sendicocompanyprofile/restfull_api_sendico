@@ -50,7 +50,7 @@ Payload contains:
 ### 1. Register User (Public) ✅
 **POST** `/users`
 
-Register user baru dengan username, password, dan nama. User baru akan memiliki `is_admin = false` secara default.
+Register user baru dengan username, password, dan nama. User baru akan memiliki `is_admin = false` secara default. Endpoint ini bersifat publik - siapa saja dapat mendaftar tanpa perlu authentication.
 
 **Access**: Public (No authentication required)
 

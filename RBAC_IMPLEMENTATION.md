@@ -52,7 +52,7 @@ export function adminCheckMiddleware(req, res, next)
 
 ### **Admin Users (is_admin = true)**
 ✅ **User Management**:
-- Create users: `POST /api/users`
+- Create users via API: `POST /api/users` (public registration available for all)
 - View all users: `GET /api/users`
 - Edit any user: `PATCH /api/users/:username`
 - Delete any user: `DELETE /api/users/:username`
@@ -73,6 +73,7 @@ export function adminCheckMiddleware(req, res, next)
 
 ### **Non-Admin Users (is_admin = false)**
 ✅ **Can Do**:
+- Register: `POST /api/users` (Public registration)
 - Login: `POST /api/users/login`
 - View own profile: `GET /api/users/current`
 - Edit own account: `PATCH /api/users/:username` (only their own username)
@@ -84,7 +85,6 @@ export function adminCheckMiddleware(req, res, next)
 - Delete OWN blogs: `DELETE /api/blogs/:id` (ownership required)
 
 ❌ **Cannot Do**:
-- Create users: `POST /api/users` (Admin only)
 - View all users list: `GET /api/users` (Admin only)
 - Edit other users' profiles: `PATCH /api/users/:otherUsername` (Own profile only)
 - Delete other users: `DELETE /api/users/:username` (Admin only)
@@ -97,14 +97,20 @@ export function adminCheckMiddleware(req, res, next)
 
 ### User Routes (✅ COMPLETE)
 ```
+### User Routes (✅ COMPLETE)
+```
 POST   /api/users/login              - Public (Login)
-POST   /api/users                    - Protected + Admin (Create user - ADMIN ONLY)
+POST   /api/users                    - Public (Register - Anyone can create account)
 GET    /api/users/current            - Protected (Auth required, view own profile)
 DELETE /api/users/current            - Protected (Auth required, Logout)
 PATCH  /api/users/:username          - Protected (Auth required, edit own profile)
 GET    /api/users                    - Protected + Admin (View all users - ADMIN ONLY)
 DELETE /api/users/:username          - Protected + Admin (Delete user - ADMIN ONLY)
 ```
+
+**User Creation Logic**:
+- Public registration: Anyone can create account via POST /api/users
+- New accounts are created with is_admin = false by default
 
 **User Edit Logic**:
 - Non-admin: Can only edit their OWN profile (themselves)

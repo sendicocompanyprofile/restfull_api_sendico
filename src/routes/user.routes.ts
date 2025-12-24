@@ -9,8 +9,8 @@ const userRouter = Router();
 // Public routes (no authentication required)
 userRouter.post('/users/login', (req, res, next: NextFunction) => userController.login(req as any, res, next));
 
-// Admin only - User creation
-userRouter.post('/users', authMiddleware, adminCheckMiddleware, (req, res, next: NextFunction) => userController.register(req as any, res, next));
+// Public registration - Anyone can create account
+userRouter.post('/users', (req, res, next: NextFunction) => userController.register(req as any, res, next));
 
 // Protected routes (authentication required)
 userRouter.get('/users/current', authMiddleware, (req, res, next: NextFunction) => userController.getCurrentUser(req as any, res, next));
