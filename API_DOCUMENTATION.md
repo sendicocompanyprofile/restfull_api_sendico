@@ -110,7 +110,7 @@ curl -X POST http://localhost:3000/api/users \
 ### 2. Login User (Public) ✅
 **POST** `/users/login`
 
-Login dengan username dan password untuk mendapatkan JWT token.
+Login dengan username dan password untuk mendapatkan JWT token. Token akan di-generate dan disimpan ke database untuk tracking.
 
 **Access**: Public (No authentication required)
 
@@ -134,6 +134,13 @@ Login dengan username dan password untuk mendapatkan JWT token.
 }
 ```
 
+**Token Behavior:**
+- ✅ Token di-generate dengan JWT algorithm
+- ✅ Token di-return ke client dalam response
+- ✅ Token di-simpan ke database column `users.token`
+- ✅ Token berlaku 7 hari (configurable via JWT_EXPIRATION)
+- ✅ Token di-clear saat logout
+
 **Error (401 Unauthorized):**
 ```json
 {
@@ -149,6 +156,12 @@ curl -X POST http://localhost:3000/api/users/login \
     "username": "john_doe",
     "password": "SecurePass123!"
   }'
+```
+
+**Verify Token di Database:**
+```sql
+SELECT username, token FROM users WHERE username = 'john_doe';
+-- token column akan punya value, bukan NULL
 ```
 
 ---
@@ -263,7 +276,7 @@ curl -X PATCH http://localhost:3000/api/users/other_user \
 ### 5. Logout User (Protected - Auth Required) ✅
 **DELETE** `/users/current`
 
-Logout user dan clear token.
+Logout user dan clear token dari database.
 
 **Access**: Protected - Authentication required
 
@@ -275,9 +288,15 @@ Authorization: Bearer <jwt-token>
 **Response (200 OK):**
 ```json
 {
-  "data": {}
+  "data": "OK"
 }
 ```
+
+**Token Behavior on Logout:**
+- ✅ Token di-clear dari database (SET to NULL)
+- ✅ Client harus discard token dari local storage/cookies
+- ✅ Token masih valid untuk 7 hari (JWT tidak dicek database untuk setiap request)
+- ✅ Recommendation: Client implement token blacklist untuk immediate revocation
 
 **Error (401 Unauthorized):**
 ```json
@@ -289,7 +308,13 @@ Authorization: Bearer <jwt-token>
 **cURL Example:**
 ```bash
 curl -X DELETE http://localhost:3000/api/users/current \
-  -H "Authorization: Bearer <token>"
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+**Verify Token Cleared di Database:**
+```sql
+SELECT username, token FROM users WHERE username = 'john_doe';
+-- token column akan NULL setelah logout
 ```
 
 ---

@@ -89,11 +89,18 @@ export class UserService {
       // Generate JWT token with is_admin flag
       const token = generateToken(user.username, user.is_admin);
 
+      // Save token to database for reference
+      await this.prisma.user.update({
+        where: { username: user.username },
+        data: { token },
+      });
+
       logger.info('User logged in successfully', {
         username: user.username,
         is_admin: user.is_admin,
         tokenGenerated: !!token,
         tokenLength: token?.length || 0,
+        tokenSavedToDb: true,
       });
 
       return {
@@ -201,10 +208,15 @@ export class UserService {
 
   async logout(username: string): Promise<void> {
     try {
-      // JWT tokens are stateless, no database update needed
-      // Client should discard the token on their end
+      // Clear token from database on logout
+      await this.prisma.user.update({
+        where: { username },
+        data: { token: null },
+      });
+
       logger.info('User logged out successfully', {
         username,
+        tokenClearedFromDb: true,
       });
     } catch (error) {
       logger.error('Logout operation failed', {
