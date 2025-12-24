@@ -46,6 +46,10 @@ export const RegisterUserSchema = z.object({
     .min(1, 'Name is required')
     .max(50, 'Name must not exceed 50 characters')
     .trim(),
+  is_admin: z
+    .boolean()
+    .optional()
+    .default(false),
 });
 
 export type RegisterUserRequest = z.infer<typeof RegisterUserSchema>;

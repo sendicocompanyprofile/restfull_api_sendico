@@ -33,6 +33,7 @@ export class UserService {
           username: request.username,
           password: hashedPassword,
           name: request.name,
+          is_admin: request.is_admin ?? false,
         },
       });
 

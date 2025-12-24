@@ -50,7 +50,7 @@ Payload contains:
 ### 1. Register User (Public) ✅
 **POST** `/users`
 
-Register user baru dengan username, password, dan nama. User baru akan memiliki `is_admin = false` secara default. Endpoint ini bersifat publik - siapa saja dapat mendaftar tanpa perlu authentication.
+Register user baru dengan username, password, nama, dan opsi is_admin. User baru akan memiliki `is_admin = false` secara default jika tidak dispesifikasi. Endpoint ini bersifat publik - siapa saja dapat mendaftar tanpa perlu authentication.
 
 **Access**: Public (No authentication required)
 
@@ -59,7 +59,8 @@ Register user baru dengan username, password, dan nama. User baru akan memiliki 
 {
   "username": "string (3-30 chars, alphanumeric + underscore only)",
   "password": "string (min 8 chars: uppercase, lowercase, number, special char)",
-  "name": "string (1-50 chars)"
+  "name": "string (1-50 chars)",
+  "is_admin": "boolean (optional, default: false)"
 }
 ```
 
@@ -99,7 +100,8 @@ curl -X POST http://localhost:3000/api/users \
   -d '{
     "username": "john_doe",
     "password": "SecurePass123!",
-    "name": "John Doe"
+    "name": "John Doe",
+    "is_admin": false
   }'
 ```
 
