@@ -92,11 +92,14 @@ export class UserService {
       logger.info('User logged in successfully', {
         username: user.username,
         is_admin: user.is_admin,
+        tokenGenerated: !!token,
+        tokenLength: token?.length || 0,
       });
 
       return {
         username: user.username,
         name: user.name,
+        is_admin: user.is_admin,
         token,
       };
     } catch (error) {
