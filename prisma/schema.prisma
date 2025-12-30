@@ -19,7 +19,7 @@ model User {
   password String @db.VarChar(255)
   name     String @db.VarChar(50)
   is_admin Boolean @default(false)
-  token    String? @db.VarChar(100)
+  token    String? @db.Text
   createdAt DateTime @default(now()) @db.Timestamp(0)
 
   @@map("users")

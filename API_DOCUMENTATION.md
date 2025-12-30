@@ -211,11 +211,10 @@ curl -X GET http://localhost:3000/api/users/current \
 ### 4. Update User Profile (Protected - Auth Required, Ownership enforced) 🔒
 **PATCH** `/users/:username`
 
-Update informasi user. Non-admin users dapat hanya mengedit profil mereka sendiri. Admin dapat mengedit profil siapapun.
+Update informasi user. Setiap user hanya dapat mengedit profil mereka sendiri.
 
 **Access**: Protected - Authentication required
-- **Non-Admin**: Hanya dapat mengedit profil mereka sendiri
-- **Admin**: Dapat mengedit profil user manapun
+- **All Users**: Hanya dapat mengedit profil mereka sendiri
 
 **Path Parameters:**
 - `username`: string (required, username user yang ingin diupdate)
@@ -254,20 +253,12 @@ Content-Type: application/json
 
 **cURL Example:**
 ```bash
-# Non-admin user updating their own profile
+# Update profil user sendiri
 curl -X PATCH http://localhost:3000/api/users/john_doe \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "Jane Doe"
-  }'
-
-# Admin updating any user
-curl -X PATCH http://localhost:3000/api/users/other_user \
-  -H "Authorization: Bearer <admin-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Updated Name"
   }'
 ```
 
@@ -319,12 +310,12 @@ SELECT username, token FROM users WHERE username = 'john_doe';
 
 ---
 
-### 6. Get All Users (Protected - Admin Only) 🔐
+### 6. Get All Users (Protected - Auth Required) 🔓
 **GET** `/users`
 
-Mendapatkan daftar semua user yang terdaftar. Hanya admin yang dapat mengakses endpoint ini.
+Mendapatkan daftar semua user yang terdaftar. Semua user autentikasi dapat mengakses endpoint ini.
 
-**Access**: Protected - Admin only (is_admin = true required)
+**Access**: Protected - Authentication required (any authenticated user)
 
 **Headers:**
 ```
@@ -356,27 +347,20 @@ Authorization: Bearer <admin-jwt-token>
 }
 ```
 
-**Error (403 Forbidden - Non-Admin):**
-```json
-{
-  "errors": "Forbidden - Admin access required"
-}
-```
-
 **cURL Example:**
 ```bash
 curl -X GET http://localhost:3000/api/users \
-  -H "Authorization: Bearer <admin-token>"
+  -H "Authorization: Bearer <token>"
 ```
 
 ---
 
-### 7. Delete User (Protected - Admin Only) 🔐
+### 7. Delete User (Protected - Auth Required) 🔓
 **DELETE** `/users/:username`
 
-Menghapus user berdasarkan username. Hanya admin yang dapat menghapus user.
+Menghapus user berdasarkan username. Semua user autentikasi dapat menghapus user.
 
-**Access**: Protected - Admin only (is_admin = true required)
+**Access**: Protected - Authentication required (any authenticated user)
 
 **Path Parameters:**
 - `username`: string (required, username of the user to be deleted)
@@ -400,13 +384,6 @@ Authorization: Bearer <admin-jwt-token>
 }
 ```
 
-**Error (403 Forbidden - Non-Admin):**
-```json
-{
-  "errors": "Forbidden - Admin access required"
-}
-```
-
 **Error (404 Not Found):**
 ```json
 {
@@ -417,7 +394,7 @@ Authorization: Bearer <admin-jwt-token>
 **cURL Example:**
 ```bash
 curl -X DELETE http://localhost:3000/api/users/john_doe \
-  -H "Authorization: Bearer <admin-token>"
+  -H "Authorization: Bearer <token>"
 ```
 
 ---
@@ -578,11 +555,10 @@ curl -X GET http://localhost:3000/api/posting/uuid-string
 ### 4. Update Posting (Protected - Auth Required, Ownership enforced) 🔒
 **PATCH** `/posting/:id`
 
-Update posting berdasarkan ID. Non-admin users hanya dapat mengedit posting mereka sendiri. Admin dapat mengedit posting siapapun.
+Update posting berdasarkan ID. Setiap user hanya dapat mengedit posting mereka sendiri.
 
 **Access**: Protected - Authentication required
-- **Non-Admin**: Hanya dapat mengedit posting mereka sendiri (ownership required)
-- **Admin**: Dapat mengedit posting siapapun
+- **All Users**: Hanya dapat mengedit posting mereka sendiri (ownership required)
 
 **Headers:**
 ```
@@ -631,16 +607,11 @@ Content-Type: multipart/form-data
 
 **cURL Example:**
 ```bash
-# Non-admin updating their own posting
+# Update posting milik sendiri
 curl -X PATCH http://localhost:3000/api/posting/uuid-string \
   -H "Authorization: Bearer <token>" \
   -F "title=Postingan Updated" \
   -F "pictures=@/path/to/new-image.jpg"
-
-# Admin updating any posting
-curl -X PATCH http://localhost:3000/api/posting/uuid-string \
-  -H "Authorization: Bearer <admin-token>" \
-  -F "title=Admin Updated Title"
 ```
 
 ---
@@ -648,11 +619,10 @@ curl -X PATCH http://localhost:3000/api/posting/uuid-string \
 ### 5. Delete Posting (Protected - Auth Required, Ownership enforced) 🔒
 **DELETE** `/posting/:id`
 
-Menghapus posting berdasarkan ID. Non-admin users hanya dapat menghapus posting mereka sendiri. Admin dapat menghapus posting siapapun.
+Menghapus posting berdasarkan ID. Setiap user hanya dapat menghapus posting mereka sendiri.
 
 **Access**: Protected - Authentication required
-- **Non-Admin**: Hanya dapat menghapus posting mereka sendiri (ownership required)
-- **Admin**: Dapat menghapus posting siapapun
+- **All Users**: Hanya dapat menghapus posting mereka sendiri (ownership required)
 
 **Headers:**
 ```
@@ -692,13 +662,9 @@ Authorization: Bearer <jwt-token>
 
 **cURL Example:**
 ```bash
-# Non-admin deleting their own posting
+# Delete posting milik sendiri
 curl -X DELETE http://localhost:3000/api/posting/uuid-string \
   -H "Authorization: Bearer <token>"
-
-# Admin deleting any posting
-curl -X DELETE http://localhost:3000/api/posting/uuid-string \
-  -H "Authorization: Bearer <admin-token>"
 ```
 
 ---
@@ -855,11 +821,10 @@ curl -X GET http://localhost:3000/api/blogs/uuid-string
 ### 4. Update Blog (Protected - Auth Required, Ownership enforced) 🔒
 **PATCH** `/blogs/:id`
 
-Update blog post berdasarkan ID. Non-admin users hanya dapat mengedit blog mereka sendiri. Admin dapat mengedit blog siapapun.
+Update blog post berdasarkan ID. Setiap user hanya dapat mengedit blog mereka sendiri.
 
 **Access**: Protected - Authentication required
-- **Non-Admin**: Hanya dapat mengedit blog mereka sendiri (ownership required)
-- **Admin**: Dapat mengedit blog siapapun
+- **All Users**: Hanya dapat mengedit blog mereka sendiri (ownership required)
 
 **Headers:**
 ```
@@ -908,16 +873,11 @@ Content-Type: multipart/form-data
 
 **cURL Example:**
 ```bash
-# Non-admin updating their own blog
+# Update blog milik sendiri
 curl -X PATCH http://localhost:3000/api/blogs/uuid-string \
   -H "Authorization: Bearer <token>" \
   -F "title=Blog Post Updated" \
   -F "picture=@/path/to/new-blog-image.jpg"
-
-# Admin updating any blog
-curl -X PATCH http://localhost:3000/api/blogs/uuid-string \
-  -H "Authorization: Bearer <admin-token>" \
-  -F "title=Admin Updated Blog Title"
 ```
 
 ---
@@ -925,11 +885,10 @@ curl -X PATCH http://localhost:3000/api/blogs/uuid-string \
 ### 5. Delete Blog (Protected - Auth Required, Ownership enforced) 🔒
 **DELETE** `/blogs/:id`
 
-Menghapus blog post berdasarkan ID. Non-admin users hanya dapat menghapus blog mereka sendiri. Admin dapat menghapus blog siapapun.
+Menghapus blog post berdasarkan ID. Setiap user hanya dapat menghapus blog mereka sendiri.
 
 **Access**: Protected - Authentication required
-- **Non-Admin**: Hanya dapat menghapus blog mereka sendiri (ownership required)
-- **Admin**: Dapat menghapus blog siapapun
+- **All Users**: Hanya dapat menghapus blog mereka sendiri (ownership required)
 
 **Headers:**
 ```
@@ -969,13 +928,9 @@ Authorization: Bearer <jwt-token>
 
 **cURL Example:**
 ```bash
-# Non-admin deleting their own blog
+# Delete blog milik sendiri
 curl -X DELETE http://localhost:3000/api/blogs/uuid-string \
   -H "Authorization: Bearer <token>"
-
-# Admin deleting any blog
-curl -X DELETE http://localhost:3000/api/blogs/uuid-string \
-  -H "Authorization: Bearer <admin-token>"
 ```
 
 ---
