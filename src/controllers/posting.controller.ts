@@ -142,7 +142,7 @@ export class PostingController {
       }
 
       const validatedData = UpdatePostingSchema.parse(updateData);
-      const result = await postingService.updatePosting(id, validatedData, req.user.username, req.user.is_admin);
+      const result = await postingService.updatePosting(id, validatedData, req.user.username);
       const message = pictureUrls ? 'Posting updated successfully. Pictures have been updated.' : 'Posting updated successfully.';
       sendSuccess(res, result, 200, undefined, message);
     } catch (error) {
@@ -163,7 +163,7 @@ export class PostingController {
         throw new ResponseError(401, 'Unauthorized - Username required');
       }
 
-      await postingService.deletePosting(id, req.user.username, req.user.is_admin);
+      await postingService.deletePosting(id, req.user.username);
       sendSuccess(res, { data: 'OK' });
     } catch (error) {
       next(error);

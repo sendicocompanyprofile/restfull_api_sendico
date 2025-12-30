@@ -115,8 +115,7 @@ class BlogService {
   async updateBlog(
     id: string,
     data: UpdateBlogType,
-    username: string,
-    is_admin: boolean
+    username: string
   ): Promise<BlogResponse> {
     // Check if blog exists
     const existingBlog = await this.prisma.blog.findUnique({ where: { id } });
@@ -126,8 +125,8 @@ class BlogService {
       throw new ResponseError(404, 'Blog not found');
     }
 
-    // Check ownership: only admin or owner can update
-    if (!is_admin && existingBlog.username !== username) {
+    // Check ownership: only owner can update
+    if (existingBlog.username !== username) {
       logger.warn('Unauthorized blog update attempt', {
         blogId: id,
         attemptedBy: username,
@@ -170,8 +169,7 @@ class BlogService {
   // Delete blog
   async deleteBlog(
     id: string,
-    username: string,
-    is_admin: boolean
+    username: string
   ): Promise<void> {
     const blog = await this.prisma.blog.findUnique({ where: { id } });
 
@@ -180,8 +178,8 @@ class BlogService {
       throw new ResponseError(404, 'Blog not found');
     }
 
-    // Check ownership: only admin or owner can delete
-    if (!is_admin && blog.username !== username) {
+    // Check ownership: only owner can delete
+    if (blog.username !== username) {
       logger.warn('Unauthorized blog delete attempt', {
         blogId: id,
         attemptedBy: username,

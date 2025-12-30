@@ -101,8 +101,7 @@ export class PostingService {
   async updatePosting(
     id: string,
     request: UpdatePostingRequest,
-    username: string,
-    is_admin: boolean
+    username: string
   ): Promise<PostingResponse> {
     const posting = await this.prisma.posting.findUnique({
       where: { id },
@@ -116,8 +115,8 @@ export class PostingService {
       throw new ResponseError(404, 'Posting not found');
     }
 
-    // Check ownership: only admin or owner can update
-    if (!is_admin && posting.username !== username) {
+    // Check ownership: only owner can update
+    if (posting.username !== username) {
       logger.warn('Unauthorized posting update attempt', {
         postingId: id,
         attemptedBy: username,
@@ -178,8 +177,7 @@ export class PostingService {
 
   async deletePosting(
     id: string,
-    username: string,
-    is_admin: boolean
+    username: string
   ): Promise<void> {
     const posting = await this.prisma.posting.findUnique({
       where: { id },
@@ -193,8 +191,8 @@ export class PostingService {
       throw new ResponseError(404, 'Posting not found');
     }
 
-    // Check ownership: only admin or owner can delete
-    if (!is_admin && posting.username !== username) {
+    // Check ownership: only owner can delete
+    if (posting.username !== username) {
       logger.warn('Unauthorized posting delete attempt', {
         postingId: id,
         attemptedBy: username,

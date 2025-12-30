@@ -104,7 +104,7 @@ class BlogController {
 
       // Validate request body
       const data = UpdateBlogSchema.parse(updateData);
-      const updatedBlog = await blogService.updateBlog(id, data, req.user.username, req.user.is_admin);
+      const updatedBlog = await blogService.updateBlog(id, data, req.user.username);
       sendSuccess(res, updatedBlog, 200, undefined, 'Blog updated successfully');
     } catch (error) {
       next(error);
@@ -125,7 +125,7 @@ class BlogController {
         throw new ResponseError(401, 'Unauthorized - Username required');
       }
 
-      await blogService.deleteBlog(id, req.user.username, req.user.is_admin);
+      await blogService.deleteBlog(id, req.user.username);
       sendSuccess(res, { message: 'OK' }, 200);
     } catch (error) {
       next(error);

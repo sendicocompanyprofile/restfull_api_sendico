@@ -52,8 +52,8 @@ export class UserController {
         throw new ResponseError(401, 'Unauthorized');
       }
 
-      // Check ownership: only admin or the user themselves can update
-      if (!req.user.is_admin && req.user.username !== targetUsername) {
+      // Only the user themselves can update their own profile
+      if (req.user.username !== targetUsername) {
         throw new ResponseError(403, 'Forbidden - You can only update your own profile');
       }
 
