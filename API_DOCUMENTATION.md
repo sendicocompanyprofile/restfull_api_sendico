@@ -5,6 +5,31 @@
 http://localhost:3000/api
 ```
 
+## ⚠️ Important - Request Content-Type
+
+### For JSON Endpoints (User Management)
+Use `Content-Type: application/json` with `-d` flag:
+```bash
+curl -X POST http://localhost:3000/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","password":"pass123"}'
+```
+
+### For File Upload Endpoints (Posting & Blog)
+Use `Content-Type: multipart/form-data` with `-F` flag (NOT `-d`):
+```bash
+curl -X POST http://localhost:3000/api/posting \
+  -H "Authorization: Bearer <token>" \
+  -F "title=My Post" \
+  -F "description=Description" \
+  -F "date=2025-12-30" \
+  -F "pictures=@/path/to/image.jpg"
+```
+
+**⚠️ IMPORTANT:** Do NOT use `-d` for file uploads. Always use `-F` for form-data with files!
+
+---
+
 ## 🔐 Authentication
 
 ### Token Type: JWT (JSON Web Token)
@@ -46,6 +71,24 @@ Payload contains:
 ---
 
 ## 📝 USER ENDPOINTS
+
+### Access Control Overview
+| Endpoint | Public | Auth Required | Note |
+|----------|--------|---------------|------|
+| POST /users | ✅ Yes | ❌ No | Register new user |
+| POST /users/login | ✅ Yes | ❌ No | Login user |
+| GET /users/current | ❌ No | ✅ Yes | Get current user info |
+| PATCH /users/:username | ❌ No | ✅ Yes | Update own profile only |
+| DELETE /users/current | ❌ No | ✅ Yes | Logout |
+| GET /users | ❌ No | ✅ Yes | Get all users |
+| DELETE /users/:username | ❌ No | ✅ Yes | Delete user |
+
+### How to Get Token
+1. **Register** atau **Login** terlebih dahulu (Public endpoints)
+2. Response akan include JWT token
+3. Gunakan token untuk protected endpoints dengan Authorization header
+
+---
 
 ### 1. Register User (Public) ✅
 **POST** `/users`
@@ -367,7 +410,7 @@ Menghapus user berdasarkan username. Semua user autentikasi dapat menghapus user
 
 **Headers:**
 ```
-Authorization: Bearer <admin-jwt-token>
+Authorization: Bearer <jwt-token>
 ```
 
 **Response (200 OK):**
@@ -400,6 +443,24 @@ curl -X DELETE http://localhost:3000/api/users/john_doe \
 ---
 
 ## 📸 POSTING ENDPOINTS
+
+### Access Control Overview
+| Endpoint | Public | Auth Required | Note |
+|----------|--------|---------------|------|
+| POST /posting | ❌ No | ✅ Yes | Create posting |
+| GET /posting | ✅ Yes | ❌ No | Get all postings |
+| GET /posting/:id | ✅ Yes | ❌ No | Get posting by ID |
+| PATCH /posting/:id | ❌ No | ✅ Yes | Update own posting only |
+| DELETE /posting/:id | ❌ No | ✅ Yes | Delete own posting only |
+
+### Important Notes
+- **File uploads require `-F` flag** (form-data), NOT `-d`
+- **Content-Type**: `multipart/form-data` (set automatically with `-F`)
+- **Max file size**: 10MB per file
+- **Allowed formats**: jpg, jpeg, png, gif, webp
+- **Max files per request**: 3 files
+
+---
 
 ### 1. Create Posting (Protected - Auth Required) ✅
 **POST** `/posting`
@@ -670,6 +731,24 @@ curl -X DELETE http://localhost:3000/api/posting/uuid-string \
 ---
 
 ## 📚 BLOG ENDPOINTS
+
+### Access Control Overview
+| Endpoint | Public | Auth Required | Note |
+|----------|--------|---------------|------|
+| POST /blogs | ❌ No | ✅ Yes | Create blog |
+| GET /blogs | ✅ Yes | ❌ No | Get all blogs |
+| GET /blogs/:id | ✅ Yes | ❌ No | Get blog by ID |
+| PATCH /blogs/:id | ❌ No | ✅ Yes | Update own blog only |
+| DELETE /blogs/:id | ❌ No | ✅ Yes | Delete own blog only |
+
+### Important Notes
+- **File uploads require `-F` flag** (form-data), NOT `-d`
+- **Content-Type**: `multipart/form-data` (set automatically with `-F`)
+- **Max file size**: 10MB per file
+- **Allowed formats**: jpg, jpeg, png, gif, webp
+- **Max files per request**: 1 file (single picture for blog)
+
+---
 
 ### 1. Create Blog (Protected - Auth Required) ✅
 **POST** `/blogs`
@@ -1312,7 +1391,63 @@ curl -X DELETE http://localhost:3000/api/posting/<posting-id> \
 
 ---
 
-## 📧 Environment Variables
+## � Quick Reference
+
+### Common curl Examples
+
+**Register User:**
+```bash
+curl -X POST http://localhost:3000/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"user1","password":"Pass123!","name":"User One"}'
+```
+
+**Login:**
+```bash
+curl -X POST http://localhost:3000/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"user1","password":"Pass123!"}'
+```
+
+**Create Posting (with file):**
+```bash
+curl -X POST http://localhost:3000/api/posting \
+  -H "Authorization: Bearer <TOKEN>" \
+  -F "title=My Post" \
+  -F "description=Post description" \
+  -F "date=2025-12-30" \
+  -F "pictures=@image.jpg"
+```
+
+**Create Blog (with file):**
+```bash
+curl -X POST http://localhost:3000/api/blogs \
+  -H "Authorization: Bearer <TOKEN>" \
+  -F "title=My Blog" \
+  -F "description=Blog description" \
+  -F "date=2025-12-30" \
+  -F "picture=@blog-image.jpg"
+```
+
+### Token Tips
+1. Save token from login response
+2. Use in ALL protected requests
+3. Token valid for 7 days
+4. Use either header format:
+   - `Authorization: Bearer <TOKEN>`
+   - `X-API-TOKEN: <TOKEN>`
+
+### File Upload Tips
+1. Always use `-F` flag (NOT `-d`)
+2. Max 10MB per file
+3. Supported formats: jpg, jpeg, png, gif, webp
+4. Posting: max 3 files
+5. Blog: max 1 file
+6. Content-Type set automatically
+
+---
+
+## �📧 Environment Variables
 
 Required for production:
 

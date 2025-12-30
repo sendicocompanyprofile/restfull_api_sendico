@@ -68,17 +68,30 @@ const loginLimiter = rateLimit({
 app.use('/api/', limiter); // Apply general rate limit to all /api routes
 app.use('/api/users/login', loginLimiter); // Stricter limit for login endpoint
 
-// Request size limits - Prevent large payload DoS
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ limit: '10kb', extended: true }));
+// ============================================
+// BODY PARSER MIDDLEWARE
+// ============================================
+
+// For routes without file uploads - use strict JSON/form parsing
+const jsonParser = express.json({ limit: '50kb' });
+const urlencodedParser = express.urlencoded({ limit: '50kb', extended: true });
+
+// Apply parsers to user routes and other non-file endpoints
+app.use('/api/users', jsonParser, urlencodedParser);
+
+// For file upload routes, we skip the body parsers since multer will handle it
+// Routes like /api/posting and /api/blogs will use multer middleware instead
 
 // ============================================
-// MIDDLEWARE
+// LOGGING MIDDLEWARE
 // ============================================
 
 app.use(requestLoggingMiddleware);
 
-// Routes
+// ============================================
+// ROUTES
+// ============================================
+
 app.use('/api', userRouter);
 app.use('/api', postingRouter);
 app.use('/api', blogRouter);
