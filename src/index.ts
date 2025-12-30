@@ -29,7 +29,6 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
       'http://localhost:3001', // Local frontend dev
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
-      'https://restfull-api-sendico.vercel.app/', //api vercel
       'https://www.sendico.app', // Production frontend
     ];
 
