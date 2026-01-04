@@ -2,7 +2,7 @@
 
 ## Base URL
 ```
-http://localhost:3000/api
+http://restfull-api-sendico.vercel.app/api
 ```
 
 ## ⚠️ Important - Request Content-Type

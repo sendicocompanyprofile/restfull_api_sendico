@@ -26,9 +26,11 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : [
       'http://localhost:3000', // Local development
-      'http://localhost:3001', // Local frontend dev
+      'http://localhost:3001', // Local frontend admin dev
+      'http://localhost:3002', // Local frontend CP dev
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
+      'http://127.0.0.1:3002',
       'https://www.sendico.app', // Production frontend
     ];
 
